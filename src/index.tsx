@@ -1,7 +1,13 @@
 import { NativeModules } from 'react-native';
 
+export type ThumbnailResult = {
+  uri: string;
+  width: number;
+  height: number;
+};
+
 type PdfThumbnailType = {
-  multiply(a: number, b: number): Promise<number>;
+  generate(filePath: string, page: number): Promise<ThumbnailResult>;
 };
 
 const { PdfThumbnail } = NativeModules;

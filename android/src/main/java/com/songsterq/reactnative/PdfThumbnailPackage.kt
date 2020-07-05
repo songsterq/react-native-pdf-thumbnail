@@ -1,13 +1,12 @@
-package com.reactnativepdfthumbnail
+package com.songsterq.reactnative
 
 import java.util.Arrays
-import java.util.Collections
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.uimanager.ViewManager
-import com.facebook.react.bridge.JavaScriptModule
+import com.songsterq.reactnative.PdfThumbnailModule
 
 class PdfThumbnailPackage : ReactPackage {
     override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> {
