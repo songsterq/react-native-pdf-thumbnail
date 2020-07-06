@@ -8,6 +8,18 @@ class PdfThumbnail: NSObject {
         return paths[0]
     }
     
+    func getOutputFilename(filePath: String) -> String {
+        let components = filePath.components(separatedBy: "/")
+        var prefix: String
+        if let origionalFileName = components.last {
+            prefix = origionalFileName.replacingOccurrences(of: ".", with: "-")
+        } else {
+            prefix = "pdf"
+        }
+        let random = Int.random(in: 0 ..< Int.max)
+        return "\(prefix)-thumbnail-\(random).jpg"
+    }
+    
     @available(iOS 11.0, *)
     @objc(generate:withPage:withResolver:withRejecter:)
     func generate(filePath: String, page: Int, resolve:RCTPromiseResolveBlock, reject:RCTPromiseRejectBlock) -> Void {
@@ -26,8 +38,7 @@ class PdfThumbnail: NSObject {
         
         let pageRect = pdfPage.bounds(for: .mediaBox)
         let image = pdfPage.thumbnail(of: CGSize(width: pageRect.width, height: pageRect.height), for: .mediaBox)
-        let random = Int.random(in: 0 ..< 10000)
-        let outputFile = getCachesDirectory().appendingPathComponent("pdf-thumbnail-\(random).jpg")
+        let outputFile = getCachesDirectory().appendingPathComponent(getOutputFilename(filePath: filePath))
         guard let data = image.jpegData(compressionQuality: 80) else {
             reject("INTERNAL_ERROR", "Cannot get image data", nil)
             return
