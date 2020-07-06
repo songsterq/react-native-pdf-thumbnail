@@ -36,8 +36,8 @@ class PdfThumbnail: NSObject {
             try data.write(to: outputFile)
             resolve([
                 "uri": outputFile.absoluteString,
-                "width": pageRect.width,
-                "height": pageRect.height,
+                "width": Int(pageRect.width),
+                "height": Int(pageRect.height),
             ])
         } catch {
             reject("INTERNAL_ERROR", "Cannot write image data", error)
