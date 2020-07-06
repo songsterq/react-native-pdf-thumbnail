@@ -36,6 +36,7 @@ export default function App() {
         resizeMode="contain"
         style={styles.thumbnailImage}
       />
+      <Text style={styles.thumbnailInfo}>uri: {thumbnail.uri}</Text>
       <Text style={styles.thumbnailInfo}>width: {thumbnail.width}</Text>
       <Text style={styles.thumbnailInfo}>height: {thumbnail.height}</Text>
     </>
@@ -68,6 +69,7 @@ const styles = StyleSheet.create({
   },
   thumbnailPreview: {
     padding: 20,
+    alignItems: 'center',
   },
   thumbnailImage: {
     width: 200,
