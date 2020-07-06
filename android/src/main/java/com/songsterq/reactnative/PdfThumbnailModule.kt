@@ -47,7 +47,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
         return
       }
 
-      val result = renderPage(pdfRenderer, page)
+      val result = renderPage(pdfRenderer, page, filePath)
       promise.resolve(result)
     } catch (ex: IOException) {
       promise.reject("INTERNAL_ERROR", ex)
@@ -58,7 +58,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
   }
 
   @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-  fun renderPage(pdfRenderer: PdfRenderer, page: Int): WritableNativeMap {
+  fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String): WritableNativeMap {
 
     val currentPage = pdfRenderer.openPage(page)
     val width = currentPage.width
@@ -74,11 +74,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     canvas.drawBitmap(bitmap, 0f, 0f, null)
     bitmap.recycle()
 
-    val generator = Random()
-    var n = 10000
-    n = generator.nextInt(n)
-    // TODO: include filePath name?
-    val outputFile = File.createTempFile("pdf-thumbnail-$n", ".jpg", reactApplicationContext.cacheDir)
+    val outputFile = File.createTempFile(getOutputFilePrefix(filePath), ".jpg", reactApplicationContext.cacheDir)
     if (outputFile.exists()) {
       outputFile.delete()
     }
@@ -89,9 +85,18 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     out.close()
 
     val map = WritableNativeMap()
-    map.putString("uri", Uri.fromFile(outputFile).toString());
+    map.putString("uri", Uri.fromFile(outputFile).toString())
     map.putInt("width", width)
     map.putInt("height", height)
     return map
+  }
+
+  fun getOutputFilePrefix(filePath: String): String {
+    val tokens = filePath.split("/")
+    val originalFilename = tokens[tokens.lastIndex]
+    val prefix = originalFilename.replace(".", "-")
+    val generator = Random()
+    val random = generator.nextInt(Integer.MAX_VALUE)
+    return "$prefix-thumbnail-$random"
   }
 }
