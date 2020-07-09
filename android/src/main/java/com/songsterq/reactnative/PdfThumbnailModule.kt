@@ -28,14 +28,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     var parcelFileDescriptor: ParcelFileDescriptor? = null
     var pdfRenderer: PdfRenderer? = null
     try {
-      val uri = Uri.parse(filePath)
-      if (ContentResolver.SCHEME_CONTENT == uri.scheme || ContentResolver.SCHEME_FILE == uri.scheme) {
-        parcelFileDescriptor = this.reactApplicationContext.contentResolver.openFileDescriptor(uri, "r")
-      } else if (filePath.startsWith("/")) {
-        val file = File(filePath)
-        parcelFileDescriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-      }
-
+      parcelFileDescriptor = getParcelFileDescriptor(filePath)
       if (parcelFileDescriptor == null) {
         promise.reject("FILE_NOT_FOUND", "File $filePath not found")
         return
@@ -52,14 +45,50 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     } catch (ex: IOException) {
       promise.reject("INTERNAL_ERROR", ex)
     } finally {
-      parcelFileDescriptor?.close()
       pdfRenderer?.close()
+      parcelFileDescriptor?.close()
     }
   }
 
   @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-  fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String): WritableNativeMap {
+  @ReactMethod
+  fun generateAllPages(filePath: String, promise: Promise) {
+    var parcelFileDescriptor: ParcelFileDescriptor? = null
+    var pdfRenderer: PdfRenderer? = null
+    try {
+      parcelFileDescriptor = getParcelFileDescriptor(filePath)
+      if (parcelFileDescriptor == null) {
+        promise.reject("FILE_NOT_FOUND", "File $filePath not found")
+        return
+      }
 
+      pdfRenderer = PdfRenderer(parcelFileDescriptor)
+      val result = WritableNativeArray()
+      for (page in 0 until pdfRenderer.pageCount) {
+        result.pushMap(renderPage(pdfRenderer, page, filePath))
+      }
+      promise.resolve(result)
+    } catch (ex: IOException) {
+      promise.reject("INTERNAL_ERROR", ex)
+    } finally {
+      pdfRenderer?.close()
+      parcelFileDescriptor?.close()
+    }
+  }
+
+  private fun getParcelFileDescriptor(filePath: String): ParcelFileDescriptor? {
+    val uri = Uri.parse(filePath)
+    if (ContentResolver.SCHEME_CONTENT == uri.scheme || ContentResolver.SCHEME_FILE == uri.scheme) {
+      return this.reactApplicationContext.contentResolver.openFileDescriptor(uri, "r")
+    } else if (filePath.startsWith("/")) {
+      val file = File(filePath)
+      return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+    }
+    return null
+  }
+
+  @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+  private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String): WritableNativeMap {
     val currentPage = pdfRenderer.openPage(page)
     val width = currentPage.width
     val height = currentPage.height
@@ -74,7 +103,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     canvas.drawBitmap(bitmap, 0f, 0f, null)
     bitmap.recycle()
 
-    val outputFile = File.createTempFile(getOutputFilePrefix(filePath), ".jpg", reactApplicationContext.cacheDir)
+    val outputFile = File.createTempFile(getOutputFilePrefix(filePath, page), ".jpg", reactApplicationContext.cacheDir)
     if (outputFile.exists()) {
       outputFile.delete()
     }
@@ -91,12 +120,12 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     return map
   }
 
-  fun getOutputFilePrefix(filePath: String): String {
+  private fun getOutputFilePrefix(filePath: String, page: Int): String {
     val tokens = filePath.split("/")
     val originalFilename = tokens[tokens.lastIndex]
     val prefix = originalFilename.replace(".", "-")
     val generator = Random()
     val random = generator.nextInt(Integer.MAX_VALUE)
-    return "$prefix-thumbnail-$random"
+    return "$prefix-thumbnail-$page-$random"
   }
 }
