@@ -1,6 +1,6 @@
 {
   "name": "react-native-pdf-thumbnail",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "Generate thumbnail for PDF files",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
