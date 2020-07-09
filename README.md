@@ -21,7 +21,7 @@ import PdfThumbnail from "react-native-pdf-thumbnail";
 
 // For iOS, the filePath can be a file URL.
 // For Android, the filePath can be either a content URI, a file URI or an absolute path.
-const filePath = 'file:///mnt/sdcard/myPicture.jpg';
+const filePath = 'file:///mnt/sdcard/myDocument.pdf';
 const page = 0;
 
 // The thumbnail image is stored in caches directory, file uri is returned.
