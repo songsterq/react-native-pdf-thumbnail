@@ -28,6 +28,9 @@ const page = 0;
 // Image dimensions are also available to help you display it correctly.
 const { uri, width, height } = await PdfThumbnail.generate(filePath, page);
 
+// Generate thumbnails for all pages, returning an array of the object above.
+const results = await PdfThumbnail.generateAllPages(filePath);
+
 ```
 
 ## Demo
