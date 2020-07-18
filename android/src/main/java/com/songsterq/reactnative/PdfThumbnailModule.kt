@@ -22,7 +22,6 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     return "PdfThumbnail"
   }
 
-  @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
   @ReactMethod
   fun generate(filePath: String, page: Int, promise: Promise) {
     var parcelFileDescriptor: ParcelFileDescriptor? = null
@@ -50,7 +49,6 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     }
   }
 
-  @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
   @ReactMethod
   fun generateAllPages(filePath: String, promise: Promise) {
     var parcelFileDescriptor: ParcelFileDescriptor? = null
@@ -87,7 +85,6 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     return null
   }
 
-  @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
   private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String): WritableNativeMap {
     val currentPage = pdfRenderer.openPage(page)
     val width = currentPage.width
