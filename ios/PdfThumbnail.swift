@@ -2,6 +2,11 @@ import PDFKit
 
 @objc(PdfThumbnail)
 class PdfThumbnail: NSObject {
+
+    @objc
+    static func requiresMainQueueSetup() -> Bool {
+        return false
+    }
     
     func getCachesDirectory() -> URL {
         let paths = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
