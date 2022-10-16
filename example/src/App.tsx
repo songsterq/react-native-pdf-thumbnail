@@ -3,17 +3,17 @@ import { Button, Image, StyleSheet, Text, View } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
 import PdfThumbnail, { ThumbnailResult } from 'react-native-pdf-thumbnail';
 
+type ErrorType = { code: string; message: string };
+
 export default function App() {
   const [thumbnail, setThumbnail] = React.useState<
     ThumbnailResult | undefined
   >();
-  const [error, setError] = React.useState<
-    { code: string; message: string } | undefined
-  >();
+  const [error, setError] = React.useState<ErrorType | undefined>();
 
   const onPress = async () => {
     try {
-      const { uri } = await DocumentPicker.pick({
+      const { uri } = await DocumentPicker.pickSingle({
         type: [DocumentPicker.types.pdf],
       });
       const result = await PdfThumbnail.generate(uri, 0);
@@ -24,7 +24,7 @@ export default function App() {
         // User cancelled the picker, exit any dialogs or menus and move on
       } else {
         setThumbnail(undefined);
-        setError(err);
+        setError(err as ErrorType);
       }
     }
   };
