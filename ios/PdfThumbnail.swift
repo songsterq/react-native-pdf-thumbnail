@@ -29,7 +29,7 @@ class PdfThumbnail: NSObject {
         let pageRect = pdfPage.bounds(for: .mediaBox)
         let image = pdfPage.thumbnail(of: CGSize(width: pageRect.width, height: pageRect.height), for: .mediaBox)
         let outputFile = getCachesDirectory().appendingPathComponent(getOutputFilename(filePath: filePath, page: page))
-        guard let data = image.jpegData(compressionQuality: 80) else {
+        guard let data = image.jpegData(compressionQuality: 0.8) else {
             return nil
         }
         do {
