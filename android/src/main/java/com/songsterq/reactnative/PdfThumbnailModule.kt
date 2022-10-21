@@ -23,7 +23,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
   }
 
   @ReactMethod
-  fun generate(filePath: String, page: Int, promise: Promise) {
+  fun generate(filePath: String, page: Int, quality: Int, promise: Promise) {
     var parcelFileDescriptor: ParcelFileDescriptor? = null
     var pdfRenderer: PdfRenderer? = null
     try {
@@ -39,7 +39,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
         return
       }
 
-      val result = renderPage(pdfRenderer, page, filePath)
+      val result = renderPage(pdfRenderer, page, filePath, quality)
       promise.resolve(result)
     } catch (ex: IOException) {
       promise.reject("INTERNAL_ERROR", ex)
@@ -50,7 +50,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
   }
 
   @ReactMethod
-  fun generateAllPages(filePath: String, promise: Promise) {
+  fun generateAllPages(filePath: String, quality: Int, promise: Promise) {
     var parcelFileDescriptor: ParcelFileDescriptor? = null
     var pdfRenderer: PdfRenderer? = null
     try {
@@ -63,7 +63,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
       pdfRenderer = PdfRenderer(parcelFileDescriptor)
       val result = WritableNativeArray()
       for (page in 0 until pdfRenderer.pageCount) {
-        result.pushMap(renderPage(pdfRenderer, page, filePath))
+        result.pushMap(renderPage(pdfRenderer, page, filePath, quality))
       }
       promise.resolve(result)
     } catch (ex: IOException) {
@@ -85,7 +85,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     return null
   }
 
-  private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String): WritableNativeMap {
+  private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String, quality: Int): WritableNativeMap {
     val currentPage = pdfRenderer.openPage(page)
     val width = currentPage.width
     val height = currentPage.height
@@ -105,7 +105,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
       outputFile.delete()
     }
     val out = FileOutputStream(outputFile)
-    bitmapWhiteBG.compress(Bitmap.CompressFormat.JPEG, 80, out)
+    bitmapWhiteBG.compress(Bitmap.CompressFormat.JPEG, quality, out)
     bitmapWhiteBG.recycle()
     out.flush()
     out.close()

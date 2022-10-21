@@ -16,7 +16,7 @@ export default function App() {
       const { uri } = await DocumentPicker.pickSingle({
         type: [DocumentPicker.types.pdf],
       });
-      const result = await PdfThumbnail.generate(uri, 0);
+      const result = await PdfThumbnail.generate(uri, 0, 100);
       setThumbnail(result);
       setError(undefined);
     } catch (err) {

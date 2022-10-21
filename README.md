@@ -31,6 +31,9 @@ const { uri, width, height } = await PdfThumbnail.generate(filePath, page);
 // Generate thumbnails for all pages, returning an array of the object above.
 const results = await PdfThumbnail.generateAllPages(filePath);
 
+// Default compression quality is 80, you can optionally specify a quality between 0 and 100.
+const { uri, width, height } = await PdfThumbnail.generate(filePath, page, 95);
+const results = await PdfThumbnail.generateAllPages(filePath, 90);
 ```
 
 ## Demo

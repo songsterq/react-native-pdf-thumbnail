@@ -6,9 +6,16 @@ export type ThumbnailResult = {
   height: number;
 };
 
-type PdfThumbnailType = {
-  generate(filePath: string, page: number): Promise<ThumbnailResult>;
-  generateAllPages(filePath: string): Promise<ThumbnailResult[]>;
+type NativeType = {
+  generate(
+    filePath: string,
+    page: number,
+    quality: number
+  ): Promise<ThumbnailResult>;
+  generateAllPages(
+    filePath: string,
+    quality: number
+  ): Promise<ThumbnailResult[]>;
 };
 
 const LINKING_ERROR =
@@ -17,7 +24,7 @@ const LINKING_ERROR =
   '- You rebuilt the app after installing the package\n' +
   '- You are not using Expo managed workflow\n';
 
-const PdfThumbnail = NativeModules.PdfThumbnail
+const PdfThumbnailNativeModule: NativeType = NativeModules.PdfThumbnail
   ? NativeModules.PdfThumbnail
   : new Proxy(
       {},
@@ -28,4 +35,35 @@ const PdfThumbnail = NativeModules.PdfThumbnail
       }
     );
 
-export default PdfThumbnail as PdfThumbnailType;
+const DEFAULT_QUALITY = 80;
+
+const sanitizeQuality = (quality?: number): number => {
+  if (quality === undefined) {
+    quality = DEFAULT_QUALITY;
+  }
+  return Math.min(Math.max(quality, 0), 100);
+};
+
+export default class PdfThumbnail {
+  static async generate(
+    filePath: string,
+    page: number,
+    quality?: number
+  ): Promise<ThumbnailResult> {
+    return PdfThumbnailNativeModule.generate(
+      filePath,
+      page,
+      sanitizeQuality(quality)
+    );
+  }
+
+  static async generateAllPages(
+    filePath: string,
+    quality?: number
+  ): Promise<ThumbnailResult[]> {
+    return PdfThumbnailNativeModule.generateAllPages(
+      filePath,
+      sanitizeQuality(quality)
+    );
+  }
+}
