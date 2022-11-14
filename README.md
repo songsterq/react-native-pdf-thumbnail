@@ -6,7 +6,9 @@ A wrapper for:
 - PDFKit on iOS (requires iOS 11+)
 - PdfRenderer on Android (requires API level 21 - LOLLIPOP)
 
-No other JavaScript or native dependencies needed.
+No other JavaScript or native dependencies.
+
+Note: This module **does not** work in Expo.
 
 ## Installation
 
