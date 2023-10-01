@@ -90,12 +90,12 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) : ReactContextBa
     val width = currentPage.width
     val height = currentPage.height
     val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    bitmap.eraseColor(Color.WHITE)
     currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
     currentPage.close()
 
     // Some bitmaps have transparent background which results in a black thumbnail. Add a white background.
     val bitmapWhiteBG = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
-    bitmapWhiteBG.eraseColor(Color.WHITE)
     val canvas = Canvas(bitmapWhiteBG)
     canvas.drawBitmap(bitmap, 0f, 0f, null)
     bitmap.recycle()
