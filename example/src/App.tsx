@@ -1,7 +1,8 @@
 import * as React from 'react';
+
 import { Button, Image, StyleSheet, Text, View } from 'react-native';
 import DocumentPicker from 'react-native-document-picker';
-import PdfThumbnail, { ThumbnailResult } from 'react-native-pdf-thumbnail';
+import PdfThumbnail, { type ThumbnailResult } from 'react-native-pdf-thumbnail';
 
 type ErrorType = { code: string; message: string };
 

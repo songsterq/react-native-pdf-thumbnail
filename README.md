@@ -44,10 +44,9 @@ The example app contains a document picker, it generates and displays a thumbnai
 
 To run it:
 ```sh
-yarn bootstrap
-cd example
-yarn ios
-yarn android
+yarn
+yarn example ios
+yarn example android
 ```
 
 iOS | Android
