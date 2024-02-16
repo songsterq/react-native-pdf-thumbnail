@@ -10791,8 +10791,8 @@ __metadata:
   linkType: hard
 
 "react-native-document-picker@npm:^9.0.1":
-  version: 9.0.1
-  resolution: "react-native-document-picker@npm:9.0.1"
+  version: 9.1.1
+  resolution: "react-native-document-picker@npm:9.1.1"
   dependencies:
     invariant: ^2.2.4
   peerDependencies:
@@ -10802,7 +10802,7 @@ __metadata:
   peerDependenciesMeta:
     react-native-windows:
       optional: true
-  checksum: a8ad0bc2ed13290e8d7ff5f77aa7e35ffda9fa380a7d01d1286111e92656415985d61469a50567b8bcb67e42c41a36b89e879d0d08b40d3fdda171eaa08721e4
+  checksum: e29b9406dd77e16f461e64035a5f7056b1fcb0d05fb26b23f0073ff2211520a7ac9b57da7e58e61ff03bcbe1120d2e104fb1c90282412736feeb12abe96e2d3b
   languageName: node
   linkType: hard
 
