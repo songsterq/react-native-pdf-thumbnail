@@ -1,0 +1,9 @@
+[
+  "rotated-90-p0",
+  "rotated-270-p0",
+  "cropbox-p0",
+  "mixed-sizes-all",
+  "normal-maxWidth-200",
+  "normal-box-200x100",
+  "huge-maxWidth-1024"
+]
