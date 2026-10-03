@@ -103,12 +103,52 @@ import type {
   ThumbnailResult,
 } from 'react-native-pdf-thumbnail';
 
+/**
+ * Generates local JPEG thumbnails using iOS PDFKit and Android PdfRenderer.
+ *
+ * @remarks
+ * Requires React Native >= 0.76 with the New Architecture; Expo development
+ * builds work without a config plugin, while Expo Go is unsupported.
+ * Both platforms render the rotated crop box (media box fallback) on white.
+ * Each call creates new cache files: lookup caching, retention, invalidation
+ * and cleanup belong to the app, and the OS may evict the files.
+ */
 declare class PdfThumbnail {
+  /**
+   * Renders one zero-based PDF page into a cache JPEG.
+   *
+   * @param filePath - Absolute filesystem path or local file:// URI (absolute
+   * path; empty host or localhost). Android also accepts readable content://
+   * URIs. Remote URLs, ph://, relative and empty paths are unsupported.
+   * @param page - Integer >= 0. Fractional, negative or non-finite indexes
+   * reject with INVALID_PAGE in JavaScript; native code checks page range.
+   * @param options - Size/quality options, or a legacy numeric JPEG quality.
+   * Defaults to quality 80 with no size cap; use limits for large pages.
+   * @returns A JPEG file:// URI with actual width and height in pixels.
+   * @throws A promise rejection with a PdfThumbnailErrorCodes code for PDF
+   * failures, a TypeError for invalid options, or an Error if not linked.
+   */
   static generate(
     filePath: string,
     page: number,
     options?: GenerateOptions | number
   ): Promise<ThumbnailResult>;
+  /**
+   * Renders every page, resolving once with results in document order.
+   *
+   * @param filePath - Absolute filesystem path or local file:// URI (absolute
+   * path; empty host or localhost); Android also accepts readable content://.
+   * Download remote PDFs or copy provider documents to app storage first.
+   * @param options - Size/quality options, or a legacy numeric JPEG quality.
+   * Defaults to quality 80 with no size cap; use limits for large pages.
+   * @returns All generated cache JPEGs and their actual pixel dimensions.
+   * @remarks
+   * No progress callback, page ranges or cancellation. For progress, call
+   * generate sequentially when the app already knows the page count. If a
+   * page fails, the promise rejects and earlier output files may remain.
+   * @throws A promise rejection with a PdfThumbnailErrorCodes code for PDF
+   * failures, a TypeError for invalid options, or an Error if not linked.
+   */
   static generateAllPages(
     filePath: string,
     options?: GenerateOptions | number
@@ -219,15 +259,19 @@ The first five codes below are exercised by the rejection cases in
 [fixtures/expectations.json](fixtures/expectations.json). The final two describe
 allocation and unexpected failures, which the deterministic fixtures do not force.
 
-| Code                 | When                                                                                          |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| `UNSUPPORTED_URI`    | Unsupported input scheme or path form; iOS also rejects `content://`.                         |
-| `FILE_NOT_FOUND`     | Input does not exist or cannot be opened for reading, including permission failures.          |
-| `INVALID_FILE`       | Input is readable but not a readable PDF, or has no readable pages / invalid page dimensions. |
-| `PASSWORD_PROTECTED` | A user password is required. Android also uses this for unsupported PDF security.             |
-| `INVALID_PAGE`       | Page is not an integer >= 0, or is outside the document's page range.                         |
-| `OUT_OF_MEMORY`      | Android cannot allocate rendering memory. iOS allocation failure cannot reliably be caught.   |
-| `INTERNAL_ERROR`     | JPEG creation/writing or another unexpected failure.                                          |
+<!-- error-codes:start -->
+
+| Code                 | When                                                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| `UNSUPPORTED_URI`    | Unsupported input scheme or path form; iOS also rejects content://.                         |
+| `FILE_NOT_FOUND`     | Input does not exist or cannot be opened for reading, including permission failures.        |
+| `INVALID_FILE`       | Input is readable but is not a readable PDF, or has no readable pages / invalid dimensions. |
+| `PASSWORD_PROTECTED` | PDF requires a user password; Android also uses this for unsupported PDF security.          |
+| `INVALID_PAGE`       | Page is not an integer >= 0 or is outside the document page range.                          |
+| `OUT_OF_MEMORY`      | Android rendering allocation failed; iOS allocation failures cannot reliably be caught.     |
+| `INTERNAL_ERROR`     | JPEG creation/writing or another unexpected failure.                                        |
+
+<!-- error-codes:end -->
 
 Owner-only encrypted PDFs (empty user password) render normally. There is no
 password parameter to unlock a locked PDF. `TypeError` for invalid options and

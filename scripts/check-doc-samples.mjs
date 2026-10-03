@@ -22,7 +22,8 @@ try {
 const source = ts.createSourceFile(
   libraryTypes,
   declarations,
-  ts.ScriptTarget.Latest
+  ts.ScriptTarget.Latest,
+  true
 );
 const api = source.statements.find(ts.isClassDeclaration);
 if (!api) throw new Error('PdfThumbnail declaration is missing.');
@@ -49,23 +50,66 @@ if (!marker.test(readme))
   throw new Error('README API reference markers are missing.');
 if (process.argv.includes('--write-api')) {
   readme = readme.replace(marker, () => generated);
-  await writeFile(readmePath, readme);
 } else if (readme.match(marker)?.[0] !== generated) {
   throw new Error(
     'README API reference is stale. Run yarn docs:check --write-api.'
   );
 }
 
-// All fixture rejection codes must stay represented in the public error table.
+// Render the fixture rejection codes with descriptions from the public TSDoc.
+// Allocation/unexpected failures are exported too, although fixtures do not force them.
 const cases = JSON.parse(
   await readFile(path.join(root, 'fixtures/expectations.json'), 'utf8')
 );
+const codes = source.statements
+  .filter(ts.isVariableStatement)
+  .flatMap((statement) => statement.declarationList.declarations)
+  .find(
+    (declaration) =>
+      declaration.name.getText(source) === 'PdfThumbnailErrorCodes'
+  );
+const members = codes?.type?.typeArguments?.[0]?.members;
+if (!members) throw new Error('Public error-code declarations are missing.');
+const rows = members.map((member) => {
+  const code = member.name.getText(source);
+  const description = ts
+    .getJSDocCommentsAndTags(member)
+    .filter(ts.isJSDoc)
+    .map((doc) => doc.comment)
+    .join(' ');
+  if (!description) throw new Error(`Missing TSDoc for ${code}.`);
+  return { code, description };
+});
 for (const code of new Set(
   cases.map((entry) => entry.expected.code).filter(Boolean)
 )) {
-  if (!readme.includes('| `' + code + '`')) {
-    throw new Error(`README error table is missing fixture code ${code}.`);
+  if (!rows.some((row) => row.code === code)) {
+    throw new Error(`Fixture error code ${code} is not exported.`);
   }
+}
+const errorMarker =
+  /(?<=<!-- error-codes:start -->\n)[\s\S]*?(?=\n<!-- error-codes:end -->)/;
+const errorTable =
+  '\n' +
+  (await format(
+    [
+      '| Code | When |',
+      '| --- | --- |',
+      ...rows.map(
+        ({ code, description }) => '| `' + code + '` | ' + description + ' |'
+      ),
+    ].join('\n'),
+    { ...pkg.prettier, parser: 'markdown' }
+  ));
+if (!errorMarker.test(readme))
+  throw new Error('README error table markers are missing.');
+if (process.argv.includes('--write-api')) {
+  readme = readme.replace(errorMarker, () => errorTable);
+  await writeFile(readmePath, readme);
+} else if (readme.match(errorMarker)?.[0] !== errorTable) {
+  throw new Error(
+    'README error table is stale. Run yarn docs:check --write-api.'
+  );
 }
 
 const scratch = await mkdtemp(path.join(tmpdir(), 'pdf-thumbnail-docs-'));
