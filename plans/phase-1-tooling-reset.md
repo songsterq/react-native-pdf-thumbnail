@@ -258,3 +258,36 @@ CI: every job green, no `continue-on-error`.
   working tree only, and let Claude commit per item and run native verification.
 - Watch for the implementer continuing after it reports "done" — wait for its
   session to go idle before touching the working tree.
+
+## Implementation notes (2026-10-02)
+
+Deviations found during implementation and local verification:
+
+- **Dual ESM + CommonJS output instead of ESM-only.** With ESM-only output, a fresh RN 0.87
+  app's unmodified Jest setup fails to import the library (`Cannot use import statement outside
+a module`): the RN Jest preset only transforms packages named exactly `react-native/…`. Every
+  consumer would have had to add a `transformIgnorePatterns` override. Builder-bob's supported
+  dual layout (`commonjs` + `module` targets, `exports` with `import`/`require` conditions,
+  `main` → CommonJS) fixes this; verified by running a fresh app's own Jest test against the
+  packed tarball with no Jest changes.
+- **Example adopts the UIScene life cycle.** The RN 0.87 template's window-based `AppDelegate`
+  is refused at launch by apps built with the iOS 27 SDK ("UIScene life cycle is required").
+  The example now starts React Native from a `SceneDelegate`. This is a template issue that
+  will affect any RN 0.87 app built with Xcode 27; it does not involve the library.
+- **Action pins** resolved with network access after Codex's offline pass: checkout v7.0.1,
+  setup-node v7.0.0, cache v6.1.0, setup-java v6.0.1, setup-xcode v1.7.0.
+- **`yarn.lock` is its own commit** (too large to review inside a tooling commit);
+  `Gemfile.lock`/`Podfile.lock` and the Pods integration live in the example commit.
+- **`.prettierignore`** excludes Xcode-managed `*.xcassets` JSON.
+
+Local verification results:
+
+| Check                                                                  | Result                                                                                                                                                |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `yarn lint` / `typecheck` / `test` (8 tests) / `prepare` on Node 24.13 | pass                                                                                                                                                  |
+| Tarball                                                                | `lib/{commonjs,module}` + `lib/typescript/{commonjs,module}`, `src`, native sources, podspec                                                          |
+| Fresh RN 0.87.1 app, unmodified Jest, packed tarball                   | pass                                                                                                                                                  |
+| lefthook: lint error on unpushed branch / non-conventional message     | both blocked                                                                                                                                          |
+| Example build Android (AAB) / iOS                                      | pass / pass                                                                                                                                           |
+| Android 16 emulator (system picker, `content://` URIs)                 | normal → 612×792 + white background; all pages → 3; password-protected → `PASSWORD_PROTECTED`; cancel → no error                                      |
+| iOS 27 simulator (system picker)                                       | normal → 612×792; all pages (300-page file) → 300; cancel → no error; password-protected → **resolves with a blank 612×792 image** (iOS #73, Phase 3) |
