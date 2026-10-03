@@ -200,10 +200,9 @@ jobs:
         shell: bash
         run: |
           yarn prepare
-          # Already built above; skip `prepare` so its output does not corrupt the JSON.
-          npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP" --json > "$RUNNER_TEMP/pdf-thumbnail-pack.json"
-          TARBALL=$(node -p "require(process.env.RUNNER_TEMP + '/pdf-thumbnail-pack.json')[0].filename")
-          echo "LIBRARY_TARBALL=$RUNNER_TEMP/$TARBALL" >> "$GITHUB_ENV"
+          # yarn pack runs only `prepack` (none here), unlike npm pack which rebuilds.
+          yarn pack --out "$RUNNER_TEMP/react-native-pdf-thumbnail.tgz"
+          echo "LIBRARY_TARBALL=$RUNNER_TEMP/react-native-pdf-thumbnail.tgz" >> "$GITHUB_ENV"
           echo "SMOKE_APP=$RUNNER_TEMP/SmokeApp" >> "$GITHUB_ENV"
 
       - name: Generate fresh app
