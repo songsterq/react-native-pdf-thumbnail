@@ -318,3 +318,268 @@ jobs:
           test -n "$SPEC"
           grep -F '@protocol NativePdfThumbnailSpec' "$SPEC"
           grep -F 'class JSI_EXPORT NativePdfThumbnailSpecJSI' "$SPEC"
+
+  e2e-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '17'
+      - name: Install Maestro
+        uses: ./.github/actions/setup-maestro
+      - name: Install image comparison dependency
+        run: python3 -m pip install pillow
+      - name: Enable KVM
+        run: sudo chmod 666 /dev/kvm
+      - name: Cache API 36 AVD snapshot
+        id: avd-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.android/avd
+            ~/.android/adb*
+          key: ${{ runner.os }}-avd-api36-google-apis-x86_64-v1
+      - name: Create AVD snapshot on cache miss
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel
+          avd-name: phase4-api36
+          force-avd-creation: false
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: echo 'Created API 36 AVD snapshot'
+      - name: Build Release example
+        working-directory: example/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
+      - name: Run self-test and pull exports
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 36
+          target: google_apis
+          arch: x86_64
+          profile: pixel
+          avd-name: phase4-api36
+          force-avd-creation: false
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
+          script: bash .github/scripts/e2e-android.sh
+      - name: Compare golden JPEGs
+        run: python3 scripts/compare-goldens.py android artifacts/android/selftest
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-android-failure
+          path: artifacts/android
+          if-no-files-found: warn
+
+  e2e-ios:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      RCT_USE_RN_DEP: 1
+      RCT_USE_PREBUILT_RNCORE: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Select stable Xcode
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest-stable
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install JDK for Maestro
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '17'
+      - name: Install Maestro
+        uses: ./.github/actions/setup-maestro
+      - name: Install image comparison dependency
+        run: python3 -m pip install --break-system-packages pillow
+      - name: Install pods
+        working-directory: example
+        run: |
+          bundle install
+          bundle exec pod install --project-directory=ios
+      - name: Select simulator by available iPhone name
+        shell: bash
+        run: |
+          xcrun simctl list devices available --json > "$RUNNER_TEMP/simulators.json"
+          python3 - <<'PY'
+          import json, os, re
+          with open(os.environ['RUNNER_TEMP'] + '/simulators.json') as source:
+              runtimes = json.load(source)['devices']
+          ios = [key for key in runtimes if '.iOS-' in key]
+          ios.sort(key=lambda key: tuple(map(int, re.findall(r'\d+', key))), reverse=True)
+          phones = [device for runtime in ios for device in runtimes[runtime]
+                    if device.get('isAvailable') and device['name'].startswith('iPhone')]
+          if not phones:
+              raise SystemExit('No available iPhone simulator; install an iOS runtime')
+          phone = next((device for device in phones if device['name'] == 'iPhone 18 Pro'), phones[0])
+          print('Selected ' + phone['name'] + ': ' + phone['udid'])
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('IOS_SIMULATOR_NAME=' + phone['name'] + '\n')
+              env.write('IOS_SIMULATOR_UDID=' + phone['udid'] + '\n')
+              env.write('IOS_SIMULATOR_STATE=' + phone['state'] + '\n')
+          PY
+      - name: Boot simulator
+        run: |
+          if [[ "$IOS_SIMULATOR_STATE" != Booted ]]; then
+            xcrun simctl boot "$IOS_SIMULATOR_UDID"
+          fi
+          xcrun simctl bootstatus "$IOS_SIMULATOR_UDID" -b
+      - name: Build Release example
+        working-directory: example/ios
+        run: >-
+          xcodebuild -workspace PdfThumbnailExample.xcworkspace
+          -scheme PdfThumbnailExample -configuration Release -sdk iphonesimulator
+          -destination "platform=iOS Simulator,id=$IOS_SIMULATOR_UDID"
+          -derivedDataPath "$RUNNER_TEMP/pdf-thumbnail-derived"
+          CODE_SIGNING_ALLOWED=NO
+      - name: Install and run self-test
+        run: |
+          mkdir -p artifacts/ios
+          xcrun simctl install "$IOS_SIMULATOR_UDID" \
+            "$RUNNER_TEMP/pdf-thumbnail-derived/Build/Products/Release-iphonesimulator/PdfThumbnailExample.app"
+          maestro --device "$IOS_SIMULATOR_UDID" test --format junit \
+            --output artifacts/ios/maestro.xml --test-output-dir artifacts/ios/maestro \
+            --debug-output artifacts/ios/maestro-debug \
+            .maestro/selftest.yaml
+      - name: Pull exports even after a failed Maestro run
+        if: always() && env.IOS_SIMULATOR_UDID != ''
+        run: |
+          mkdir -p artifacts/ios
+          CONTAINER=$(xcrun simctl get_app_container "$IOS_SIMULATOR_UDID" org.songsterq.pdfthumbnail.example data)
+          cp -R "$CONTAINER/Documents/selftest" artifacts/ios/selftest
+      - name: Compare golden JPEGs
+        run: python3 scripts/compare-goldens.py ios artifacts/ios/selftest
+      - name: Upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-ios-failure
+          path: artifacts/ios
+          if-no-files-found: warn
+
+  smoke-expo:
+    name: Smoke Expo (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [android, ios]
+        include:
+          - platform: android
+            os: ubuntu-latest
+          - platform: ios
+            os: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Select stable Xcode
+        if: matrix.platform == 'ios'
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: latest-stable
+      - name: Setup
+        uses: ./.github/actions/setup
+      - name: Install JDK
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: zulu
+          java-version: '17'
+      - name: Build and pack library
+        run: |
+          yarn prepare
+          yarn pack --out "$RUNNER_TEMP/react-native-pdf-thumbnail.tgz"
+          echo "LIBRARY_TARBALL=$RUNNER_TEMP/react-native-pdf-thumbnail.tgz" >> "$GITHUB_ENV"
+          echo "SMOKE_APP=$RUNNER_TEMP/ExpoSmoke" >> "$GITHUB_ENV"
+      - name: Generate latest Expo app
+        working-directory: ${{ runner.temp }}
+        # A blank TypeScript template gives us a stable App.tsx entrypoint.
+        run: npx create-expo-app@latest ExpoSmoke --template blank-typescript --yes
+      - name: Install packed library
+        working-directory: ${{ env.SMOKE_APP }}
+        run: npm install "$LIBRARY_TARBALL"
+      - name: Exercise public API in consumer entrypoint
+        working-directory: ${{ env.SMOKE_APP }}
+        run: |
+          cat > App.tsx <<'APP'
+          import {useEffect} from 'react';
+          import {Text, View} from 'react-native';
+          import PdfThumbnail from 'react-native-pdf-thumbnail';
+          export default function App() {
+            useEffect(() => {
+              PdfThumbnail.generate('file:///smoke.pdf', 0).catch(console.warn);
+            }, []);
+            return <View><Text>PDF thumbnail Expo smoke</Text></View>;
+          }
+          APP
+      - name: Run consumer Jest tests when provided by template
+        working-directory: ${{ env.SMOKE_APP }}
+        run: |
+          node - <<'JS'
+          const fs = require('fs');
+          const {spawnSync} = require('child_process');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          if (pkg.scripts?.test) {
+            const result = spawnSync('npm', ['test', '--', '--runInBand', '--watch=false'], {stdio: 'inherit'});
+            if (result.error) throw result.error;
+            process.exit(result.status ?? 1);
+          }
+          console.log('Template supplies no test script; no consumer Jest test to run.');
+          JS
+      - name: Expo prebuild without a config plugin
+        working-directory: ${{ env.SMOKE_APP }}
+        env:
+          CI: '1'
+          SMOKE_PLATFORM: ${{ matrix.platform }}
+        run: npx expo prebuild --platform "$SMOKE_PLATFORM" --no-install
+      - name: Install dependencies added by prebuild
+        working-directory: ${{ env.SMOKE_APP }}
+        run: npm install
+      - name: Build Android with bundled JavaScript
+        if: matrix.platform == 'android'
+        working-directory: ${{ env.SMOKE_APP }}/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+      - name: Assert Android native autolinking
+        if: matrix.platform == 'android'
+        working-directory: ${{ env.SMOKE_APP }}/android
+        run: |
+          PACKAGE_LIST=$(find app/build/generated -name PackageList.java -print -quit)
+          test -n "$PACKAGE_LIST"
+          grep -F 'org.songsterq.pdfthumbnail.PdfThumbnailPackage' "$PACKAGE_LIST"
+      - name: Install iOS pods
+        if: matrix.platform == 'ios'
+        working-directory: ${{ env.SMOKE_APP }}/ios
+        run: pod install
+      - name: Build iOS with bundled JavaScript
+        if: matrix.platform == 'ios'
+        working-directory: ${{ env.SMOKE_APP }}/ios
+        run: >-
+          xcodebuild -workspace ExpoSmoke.xcworkspace -scheme ExpoSmoke
+          -configuration Release -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/expo-smoke-derived"
+          CODE_SIGNING_ALLOWED=NO
+      - name: Assert iOS native codegen
+        if: matrix.platform == 'ios'
+        working-directory: ${{ env.SMOKE_APP }}
+        run: |
+          SPEC=$(find ios/build/generated -path '*/PdfThumbnailSpec/PdfThumbnailSpec.h' -print -quit)
+          test -n "$SPEC"
+          grep -F '@protocol NativePdfThumbnailSpec' "$SPEC"

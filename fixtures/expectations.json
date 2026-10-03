@@ -1,0 +1,569 @@
+[
+  {
+    "name": "normal-p0",
+    "file": "normal.pdf",
+    "page": 0,
+    "expected": {
+      "description": "612×792",
+      "sizes": [[612, 792]]
+    }
+  },
+  {
+    "name": "normal-p2",
+    "file": "normal.pdf",
+    "page": 2,
+    "expected": {
+      "description": "612×792",
+      "sizes": [[612, 792]]
+    }
+  },
+  {
+    "name": "normal-maxWidth-200",
+    "file": "normal.pdf",
+    "options": {
+      "maxWidth": 200
+    },
+    "expected": {
+      "description": "200×259",
+      "sizes": [[200, 259]]
+    }
+  },
+  {
+    "name": "normal-box-200x100",
+    "file": "normal.pdf",
+    "options": {
+      "maxWidth": 200,
+      "maxHeight": 100
+    },
+    "expected": {
+      "description": "77×100",
+      "sizes": [[77, 100]]
+    }
+  },
+  {
+    "name": "normal-no-upscale",
+    "file": "normal.pdf",
+    "options": {
+      "maxWidth": 2000
+    },
+    "expected": {
+      "description": "612×792 (no upscaling)",
+      "sizes": [[612, 792]]
+    }
+  },
+  {
+    "name": "cropbox-p0",
+    "file": "cropbox.pdf",
+    "expected": {
+      "description": "300×400",
+      "sizes": [[300, 400]]
+    }
+  },
+  {
+    "name": "rotated-90-p0",
+    "file": "rotated-90.pdf",
+    "expected": {
+      "description": "792×612, drawing upright",
+      "sizes": [[792, 612]]
+    }
+  },
+  {
+    "name": "landscape-p0",
+    "file": "landscape.pdf",
+    "expected": {
+      "description": "792×612",
+      "sizes": [[792, 612]]
+    }
+  },
+  {
+    "name": "mixed-sizes-all",
+    "file": "mixed-sizes.pdf",
+    "all": true,
+    "expected": {
+      "description": "per-page sizes as authored",
+      "sizes": [
+        [612, 792],
+        [792, 612],
+        [792, 612],
+        [400, 300],
+        [200, 300]
+      ]
+    }
+  },
+  {
+    "name": "huge-maxWidth-1024",
+    "file": "huge-page.pdf",
+    "options": {
+      "maxWidth": 1024
+    },
+    "expected": {
+      "description": "1024×1024; Android peak memory ≪ full-size bitmap",
+      "sizes": [[1024, 1024]]
+    }
+  },
+  {
+    "name": "password-user",
+    "file": "password-user.pdf",
+    "expected": {
+      "description": "PASSWORD_PROTECTED",
+      "code": "PASSWORD_PROTECTED"
+    }
+  },
+  {
+    "name": "password-owner-only",
+    "file": "password-owner-only.pdf",
+    "expected": {
+      "description": "renders",
+      "sizes": [[612, 792]]
+    }
+  },
+  {
+    "name": "not-a-pdf",
+    "file": "not-a-pdf.pdf",
+    "expected": {
+      "description": "INVALID_FILE",
+      "code": "INVALID_FILE"
+    }
+  },
+  {
+    "name": "truncated",
+    "file": "truncated.pdf",
+    "expected": {
+      "description": "INVALID_FILE",
+      "code": "INVALID_FILE"
+    }
+  },
+  {
+    "name": "missing-file",
+    "expected": {
+      "description": "FILE_NOT_FOUND",
+      "code": "FILE_NOT_FOUND"
+    },
+    "missingFile": "missing.pdf"
+  },
+  {
+    "name": "https-uri",
+    "path": "https://example.com/document.pdf",
+    "expected": {
+      "description": "UNSUPPORTED_URI",
+      "code": "UNSUPPORTED_URI"
+    }
+  },
+  {
+    "name": "relative-path",
+    "path": "normal.pdf",
+    "expected": {
+      "description": "UNSUPPORTED_URI",
+      "code": "UNSUPPORTED_URI"
+    }
+  },
+  {
+    "name": "page-negative",
+    "file": "normal.pdf",
+    "page": -1,
+    "expected": {
+      "description": "INVALID_PAGE",
+      "code": "INVALID_PAGE"
+    }
+  },
+  {
+    "name": "page-fractional",
+    "file": "normal.pdf",
+    "page": 1.5,
+    "expected": {
+      "description": "INVALID_PAGE",
+      "code": "INVALID_PAGE"
+    }
+  },
+  {
+    "name": "page-out-of-range",
+    "file": "normal.pdf",
+    "page": 3,
+    "expected": {
+      "description": "INVALID_PAGE",
+      "code": "INVALID_PAGE"
+    }
+  },
+  {
+    "name": "legacy-quality-50",
+    "file": "normal.pdf",
+    "options": 50,
+    "expected": {
+      "description": "works, quality 50",
+      "sizes": [[612, 792]]
+    }
+  },
+  {
+    "name": "rotated-270-p0",
+    "file": "rotated-270.pdf",
+    "expected": {
+      "description": "792×612, matches Preview rotation",
+      "sizes": [[792, 612]]
+    }
+  },
+  {
+    "name": "many-pages-all-bounded",
+    "file": "many-pages.pdf",
+    "all": true,
+    "options": {
+      "maxWidth": 64
+    },
+    "expected": {
+      "description": "300 pages, each 64×83",
+      "sizes": [
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83],
+        [64, 83]
+      ]
+    }
+  },
+  {
+    "name": "legacy-all-default",
+    "file": "normal.pdf",
+    "all": true,
+    "expected": {
+      "description": "3 pages, each 612×792",
+      "sizes": [
+        [612, 792],
+        [612, 792],
+        [612, 792]
+      ]
+    }
+  },
+  {
+    "name": "legacy-all-quality-50",
+    "file": "normal.pdf",
+    "all": true,
+    "options": 50,
+    "expected": {
+      "description": "3 pages, quality 50",
+      "sizes": [
+        [612, 792],
+        [612, 792],
+        [612, 792]
+      ]
+    }
+  },
+  {
+    "name": "absolute-path",
+    "expected": {
+      "description": "612×792",
+      "sizes": [[612, 792]]
+    },
+    "file": "normal.pdf",
+    "absolute": true
+  },
+  {
+    "name": "empty-path",
+    "path": "",
+    "expected": {
+      "description": "UNSUPPORTED_URI",
+      "code": "UNSUPPORTED_URI"
+    }
+  },
+  {
+    "name": "ph-uri",
+    "path": "ph://document",
+    "expected": {
+      "description": "UNSUPPORTED_URI",
+      "code": "UNSUPPORTED_URI"
+    }
+  }
+]

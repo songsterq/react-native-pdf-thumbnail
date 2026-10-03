@@ -10,6 +10,7 @@
     "build:ios": "react-native build-ios --mode Debug"
   },
   "dependencies": {
+    "@dr.pogodin/react-native-fs": "^2.40.3",
     "@react-native-documents/picker": "^12.0.0",
     "react": "19.2.3",
     "react-native": "0.87.1"
