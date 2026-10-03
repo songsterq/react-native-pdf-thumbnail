@@ -172,3 +172,14 @@ draft can start in parallel since it does not touch the same files.
 
 Not yet verified locally: the Android DocumentsUI picker flow (local-only by design), Expo iOS, and
 the CI emulator/simulator jobs themselves — covered by the PR's CI run.
+
+## Phase 5 decision update (2026-10-03)
+
+- The publish job runs in the GitHub environment **`npm-release`** (created 2026-10-03): required
+  reviewer `songsterq` (self-review allowed), deployments restricted to tags matching `v*`. Every
+  publish therefore waits for the owner's approval in the Actions tab.
+- npm trusted publisher (owner configures on npmjs.com): owner `songsterq`, repository
+  `react-native-pdf-thumbnail`, workflow `release.yml`, environment `npm-release`, allowed action
+  `npm publish`. After the first successful workflow publish: Publishing access → "Require
+  two-factor authentication and disallow tokens".
+- README screenshots are captured by Claude on devices into `docs/images/` (Codex references the paths).
