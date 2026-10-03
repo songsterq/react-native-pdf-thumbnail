@@ -29,7 +29,8 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
-    "release": "release-it --only-version"
+    "release": "release-it --only-version",
+    "docs:check": "node scripts/check-doc-samples.mjs"
   },
   "keywords": [
     "react-native",
