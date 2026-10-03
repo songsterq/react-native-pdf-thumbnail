@@ -285,6 +285,15 @@ jobs:
           grep -F 'org.songsterq.pdfthumbnail.PdfThumbnailPackage' "$PACKAGE_LIST"
           ! grep -F 'com.pdfthumbnail.' "$PACKAGE_LIST"
 
+      - name: Assert Android codegen output
+        if: matrix.platform == 'android'
+        working-directory: ${{ env.SMOKE_APP }}
+        shell: bash
+        run: |
+          SPEC=node_modules/react-native-pdf-thumbnail/android/build/generated/source/codegen/java/org/songsterq/pdfthumbnail/NativePdfThumbnailSpec.java
+          test -f "$SPEC"
+          grep -F 'abstract class NativePdfThumbnailSpec' "$SPEC"
+
       - name: Install iOS dependencies
         if: matrix.platform == 'ios'
         working-directory: ${{ env.SMOKE_APP }}/ios
@@ -298,3 +307,13 @@ jobs:
           -configuration Debug -sdk iphonesimulator
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO
+
+      - name: Assert iOS codegen output
+        if: matrix.platform == 'ios'
+        working-directory: ${{ env.SMOKE_APP }}
+        shell: bash
+        run: |
+          SPEC=ios/build/generated/ios/PdfThumbnailSpec/PdfThumbnailSpec.h
+          test -f "$SPEC"
+          grep -F '@protocol NativePdfThumbnailSpec' "$SPEC"
+          grep -F 'class JSI_EXPORT NativePdfThumbnailSpecJSI' "$SPEC"
