@@ -17,15 +17,15 @@ current 1.x codebase** so existing users are unblocked before the tooling reset
 
 ## Non-goals (deferred)
 
-| Item | Phase |
-|---|---|
-| iOS `.cropBox` instead of `.mediaBox` (#72) — changes output dimensions | 3 |
-| iOS locked/password-protected document handling (#73 on iOS) | 3 |
-| Down-scaling / `maxWidth` options for large PDFs (#77) | 3 |
-| Cross-platform error-code consistency (e.g. `INVALID_FILE` for corrupt PDFs) | 3 |
-| TurboModule / codegen, removing `AndroidManifestNew.xml` & `supportsNamespace()` | 2 |
-| Toolchain upgrades (Yarn 4, bob 0.4x, ESLint 9, example app regeneration) | 1 |
-| Dependabot PRs #84–#94, PR #83 | 1 (closed after lockfile regen) / declined |
+| Item                                                                             | Phase                                      |
+| -------------------------------------------------------------------------------- | ------------------------------------------ |
+| iOS `.cropBox` instead of `.mediaBox` (#72) — changes output dimensions          | 3                                          |
+| iOS locked/password-protected document handling (#73 on iOS)                     | 3                                          |
+| Down-scaling / `maxWidth` options for large PDFs (#77)                           | 3                                          |
+| Cross-platform error-code consistency (e.g. `INVALID_FILE` for corrupt PDFs)     | 3                                          |
+| TurboModule / codegen, removing `AndroidManifestNew.xml` & `supportsNamespace()` | 2                                          |
+| Toolchain upgrades (Yarn 4, bob 0.4x, ESLint 9, example app regeneration)        | 1                                          |
+| Dependabot PRs #84–#94, PR #83                                                   | 1 (closed after lockfile regen) / declined |
 
 ## Semver contract for 1.3.2
 
@@ -33,13 +33,13 @@ current 1.x codebase** so existing users are unblocked before the tooling reset
 code**. New codes are only introduced for paths that currently crash the app.
 Existing codes stay as they are: `FILE_NOT_FOUND`, `INVALID_PAGE`, `INTERNAL_ERROR`.
 
-| Situation (Android) | Today | 1.3.2 |
-|---|---|---|
-| Unsupported path form / null descriptor | `FILE_NOT_FOUND` | unchanged |
-| `IOException` (incl. `FileNotFoundException`, corrupt PDF) | `INTERNAL_ERROR` | unchanged |
-| `PdfRenderer(...)` throws `SecurityException` (password / unsupported security) | **crash** | `PASSWORD_PROTECTED` |
-| `OutOfMemoryError` while allocating/rendering a page | **crash** | `OUT_OF_MEMORY` |
-| Any other `Exception` (e.g. `SecurityException` from `ContentResolver`, `IllegalArgumentException`, `IllegalStateException`) | **crash** | `INTERNAL_ERROR` |
+| Situation (Android)                                                                                                          | Today            | 1.3.2                |
+| ---------------------------------------------------------------------------------------------------------------------------- | ---------------- | -------------------- |
+| Unsupported path form / null descriptor                                                                                      | `FILE_NOT_FOUND` | unchanged            |
+| `IOException` (incl. `FileNotFoundException`, corrupt PDF)                                                                   | `INTERNAL_ERROR` | unchanged            |
+| `PdfRenderer(...)` throws `SecurityException` (password / unsupported security)                                              | **crash**        | `PASSWORD_PROTECTED` |
+| `OutOfMemoryError` while allocating/rendering a page                                                                         | **crash**        | `OUT_OF_MEMORY`      |
+| Any other `Exception` (e.g. `SecurityException` from `ContentResolver`, `IllegalArgumentException`, `IllegalStateException`) | **crash**        | `INTERNAL_ERROR`     |
 
 ## Work items
 
@@ -250,12 +250,12 @@ Deviations found during implementation and local verification:
 
 Local verification results:
 
-| Check | Result |
-|---|---|
-| `yarn lint` / `typecheck` / `test` (8 tests) / `prepare` | pass |
-| Example app (RN 0.72) Android build | pass; `PackageList` imports `org.songsterq.pdfthumbnail.PdfThumbnailPackage` |
-| Fresh RN 0.76.9 app — Android | pass, autolinking assertion passes |
-| Fresh RN 0.87.1 app — Android / iOS | pass / pass |
+| Check                                                     | Result                                                                                                                                                                                                               |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `yarn lint` / `typecheck` / `test` (8 tests) / `prepare`  | pass                                                                                                                                                                                                                 |
+| Example app (RN 0.72) Android build                       | pass; `PackageList` imports `org.songsterq.pdfthumbnail.PdfThumbnailPackage`                                                                                                                                         |
+| Fresh RN 0.76.9 app — Android                             | pass, autolinking assertion passes                                                                                                                                                                                   |
+| Fresh RN 0.87.1 app — Android / iOS                       | pass / pass                                                                                                                                                                                                          |
 | Runtime on Android 16 emulator (RN 0.87.1, interop layer) | normal → OK 612×792 (white background); password-protected → `PASSWORD_PROTECTED`; 14400×14400 page → OK, no crash; missing file → `INTERNAL_ERROR` (unchanged); 300-page `generateAllPages` → OK; app never crashed |
 
 Not exercised: the `OUT_OF_MEMORY` path (the emulator had enough native heap for an ~830 MB bitmap).

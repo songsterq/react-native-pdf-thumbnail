@@ -3,6 +3,7 @@
 A react native module for generating thumbnail for PDF files.
 
 A wrapper for:
+
 - PDFKit on iOS (requires iOS 11+)
 - PdfRenderer on Android (requires API level 21 - LOLLIPOP)
 
@@ -19,7 +20,7 @@ npm install react-native-pdf-thumbnail
 ## Usage
 
 ```js
-import PdfThumbnail from "react-native-pdf-thumbnail";
+import PdfThumbnail from 'react-native-pdf-thumbnail';
 
 // For iOS, the filePath can be a file URL.
 // For Android, the filePath can be either a content URI, a file URI or an absolute path.
@@ -43,13 +44,13 @@ const results = await PdfThumbnail.generateAllPages(filePath, 90);
 Both methods return promises. Handle failures with `try`/`catch` or `.catch()`;
 rejections include a `code` and a human-readable message.
 
-| Code | Android | iOS (unchanged) |
-| --- | --- | --- |
-| `FILE_NOT_FOUND` | Unsupported path form or no file descriptor returned. | Invalid file URL, or PDFKit cannot open the document. |
-| `INVALID_PAGE` | Page index is outside the document's page range. | PDFKit cannot retrieve the requested page. |
-| `INTERNAL_ERROR` | File I/O failures (including missing files and corrupt PDFs), permission denial when opening a URI, JPEG compression/write failures, or other runtime exceptions. | Cannot create or write JPEG image data. |
-| `PASSWORD_PROTECTED` | New in 1.3.2: Android's PDF renderer rejects a password-protected PDF or unsupported PDF security. | Not used. |
-| `OUT_OF_MEMORY` | New in 1.3.2: insufficient memory while generating thumbnails. | Not used. |
+| Code                 | Android                                                                                                                                                           | iOS (unchanged)                                       |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `FILE_NOT_FOUND`     | Unsupported path form or no file descriptor returned.                                                                                                             | Invalid file URL, or PDFKit cannot open the document. |
+| `INVALID_PAGE`       | Page index is outside the document's page range.                                                                                                                  | PDFKit cannot retrieve the requested page.            |
+| `INTERNAL_ERROR`     | File I/O failures (including missing files and corrupt PDFs), permission denial when opening a URI, JPEG compression/write failures, or other runtime exceptions. | Cannot create or write JPEG image data.               |
+| `PASSWORD_PROTECTED` | New in 1.3.2: Android's PDF renderer rejects a password-protected PDF or unsupported PDF security.                                                                | Not used.                                             |
+| `OUT_OF_MEMORY`      | New in 1.3.2: insufficient memory while generating thumbnails.                                                                                                    | Not used.                                             |
 
 Password/security and memory failures on Android reject the promise so the app
 can handle them. iOS password-protected document handling is unchanged.
@@ -75,9 +76,9 @@ yarn example android
 The iOS command installs pods automatically. See [CONTRIBUTING.md](CONTRIBUTING.md)
 for native setup, build commands, and checks.
 
-iOS | Android
-------- | ---
-![86563759-d103db80-bf19-11ea-98a2-77788efe4938](https://user-images.githubusercontent.com/3325682/86644851-bfaae580-bf92-11ea-8b2b-f065784b3425.png) | ![86564313-dca3d200-bf1a-11ea-99fe-6f08a3302b20](https://user-images.githubusercontent.com/3325682/86644858-c174a900-bf92-11ea-8a01-79476b1050a1.png)
+| iOS                                                                                                                                                   | Android                                                                                                                                               |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![86563759-d103db80-bf19-11ea-98a2-77788efe4938](https://user-images.githubusercontent.com/3325682/86644851-bfaae580-bf92-11ea-8b2b-f065784b3425.png) | ![86564313-dca3d200-bf1a-11ea-99fe-6f08a3302b20](https://user-images.githubusercontent.com/3325682/86644858-c174a900-bf92-11ea-8a01-79476b1050a1.png) |
 
 ## Contributing
 

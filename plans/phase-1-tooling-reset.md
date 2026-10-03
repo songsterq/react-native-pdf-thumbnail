@@ -19,13 +19,13 @@ v2.0.0) starts from a current, green baseline.
 
 ## Non-goals (deferred)
 
-| Item | Phase |
-|---|---|
-| Native module code (Kotlin/Swift), `android/build.gradle`, podspec contents & name | 2 |
-| `codegenConfig`, TurboModule spec, New-Arch-only peer range | 2 |
-| Error-code consistency, iOS fixes, options API | 3 |
-| Maestro E2E tests | 4 |
-| npm trusted publishing, README compatibility table | 5 |
+| Item                                                                               | Phase |
+| ---------------------------------------------------------------------------------- | ----- |
+| Native module code (Kotlin/Swift), `android/build.gradle`, podspec contents & name | 2     |
+| `codegenConfig`, TurboModule spec, New-Arch-only peer range                        | 2     |
+| Error-code consistency, iOS fixes, options API                                     | 3     |
+| Maestro E2E tests                                                                  | 4     |
+| npm trusted publishing, README compatibility table                                 | 5     |
 
 Phase 1 touches **no native library code**. The legacy module keeps working on the
 RN 0.87 example through the interop layer (proven by the Phase 0 smoke run and the
@@ -63,25 +63,25 @@ Known template defects to avoid:
 
 ## Target versions
 
-| Tool | From | To |
-|---|---|---|
-| Node (`.nvmrc`) | 22 | 24 (LTS) |
-| Yarn | 3.6.1 + 2 plugins + custom pod-install plugin | 4.x (template version), no plugins |
-| react-native-builder-bob | 0.23 | 0.43.x |
-| TypeScript | 5.0 | 6.0.x (template). **Not 7.x** — the native-Go compiler; verify bob compatibility before adopting, later |
-| ESLint | 8, `eslintConfig` in package.json | 9, `eslint.config.mjs` flat config |
-| Prettier | 2 | 3 |
-| Jest | 28, `preset: react-native` | 29, `@react-native/jest-preset` |
-| @types/react | 17 + forced resolution | 19 (drop `resolutions`) |
-| @types/react-native | 0.70 | removed (RN ships types) |
-| Babel preset | `metro-react-native-babel-preset` | `react-native-builder-bob/babel-preset` + `@react-native/babel-preset` |
-| turbo | 1 (`pipeline`) | 2 (`tasks`) |
-| commitlint | 17 | 21 |
-| release-it / conventional-changelog | 15 / 5 | 21 / 12 (`release-it --only-version`) |
-| lefthook | `@evilmartians/lefthook` 1.5 | `lefthook` 2.x |
-| react / react-native (dev + example) | 18.2 / 0.72.6 | 19.2.x / 0.87.1 |
-| Document picker (example) | `react-native-document-picker` 9 (deprecated) | `@react-native-documents/picker` 12 |
-| Metro monorepo setup | hand-rolled `blacklistRE`/`extraNodeModules` | `react-native-monorepo-config` |
+| Tool                                 | From                                          | To                                                                                                      |
+| ------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Node (`.nvmrc`)                      | 22                                            | 24 (LTS)                                                                                                |
+| Yarn                                 | 3.6.1 + 2 plugins + custom pod-install plugin | 4.x (template version), no plugins                                                                      |
+| react-native-builder-bob             | 0.23                                          | 0.43.x                                                                                                  |
+| TypeScript                           | 5.0                                           | 6.0.x (template). **Not 7.x** — the native-Go compiler; verify bob compatibility before adopting, later |
+| ESLint                               | 8, `eslintConfig` in package.json             | 9, `eslint.config.mjs` flat config                                                                      |
+| Prettier                             | 2                                             | 3                                                                                                       |
+| Jest                                 | 28, `preset: react-native`                    | 29, `@react-native/jest-preset`                                                                         |
+| @types/react                         | 17 + forced resolution                        | 19 (drop `resolutions`)                                                                                 |
+| @types/react-native                  | 0.70                                          | removed (RN ships types)                                                                                |
+| Babel preset                         | `metro-react-native-babel-preset`             | `react-native-builder-bob/babel-preset` + `@react-native/babel-preset`                                  |
+| turbo                                | 1 (`pipeline`)                                | 2 (`tasks`)                                                                                             |
+| commitlint                           | 17                                            | 21                                                                                                      |
+| release-it / conventional-changelog  | 15 / 5                                        | 21 / 12 (`release-it --only-version`)                                                                   |
+| lefthook                             | `@evilmartians/lefthook` 1.5                  | `lefthook` 2.x                                                                                          |
+| react / react-native (dev + example) | 18.2 / 0.72.6                                 | 19.2.x / 0.87.1                                                                                         |
+| Document picker (example)            | `react-native-document-picker` 9 (deprecated) | `@react-native-documents/picker` 12                                                                     |
+| Metro monorepo setup                 | hand-rolled `blacklistRE`/`extraNodeModules`  | `react-native-monorepo-config`                                                                          |
 
 ## Work items
 
