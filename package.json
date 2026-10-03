@@ -39,7 +39,10 @@
     "ios",
     "android"
   ],
-  "repository": "https://github.com/songsterq/react-native-pdf-thumbnail",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/songsterq/react-native-pdf-thumbnail.git"
+  },
   "author": "Song Qian <songsterq@gmail.com> (https://github.com/songsterq)",
   "license": "MIT",
   "bugs": {
@@ -112,18 +115,22 @@
       "tagName": "v${version}"
     },
     "npm": {
-      "publish": true
+      "publish": false
     },
     "github": {
-      "release": true
+      "release": true,
+      "releaseNotes": "node scripts/release-notes.mjs ${version}"
     },
     "plugins": {
       "@release-it/conventional-changelog": {
         "preset": {
           "name": "angular"
-        }
+        },
+        "infile": "CHANGELOG.md",
+        "header": "# Changelog"
       }
-    }
+    },
+    "preReleaseBase": 1
   },
   "prettier": {
     "quoteProps": "consistent",

@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm-release
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Verify npm supports trusted publishing
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const version = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();
+          if (!/^\d+\.\d+\.\d+$/.test(version)) {
+            throw new Error(`Unexpected npm version: ${version}`);
+          }
+          const actual = version.split('.').map(Number);
+          const minimum = [11, 5, 1];
+          let comparison = 0;
+          for (let index = 0; index < minimum.length; index++) {
+            if (actual[index] !== minimum[index]) {
+              comparison = actual[index] > minimum[index] ? 1 : -1;
+              break;
+            }
+          }
+          if (comparison < 0) throw new Error(`npm >= 11.5.1 is required; found ${version}`);
+          console.log(`npm ${version} supports trusted publishing`);
+          NODE
+
+      - name: Verify release tag and choose npm dist-tag
+        id: version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const { version } = require('./package.json');
+          if (process.env.RELEASE_TAG !== `v${version}`) {
+            throw new Error(`Tag ${process.env.RELEASE_TAG} does not match package version v${version}`);
+          }
+          const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(version);
+          if (!match) throw new Error(`Invalid package version: ${version}`);
+          const distTag = match[4] ? 'next' : 'latest';
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `dist_tag=${distTag}\n`);
+          console.log(`Publishing ${version} on ${distTag}`);
+          NODE
+
+      - name: Build package
+        run: yarn prepare
+
+      - name: Publish with provenance
+        env:
+          NPM_DIST_TAG: ${{ steps.version.outputs.dist_tag }}
+        run: npm publish --provenance --access public --tag "$NPM_DIST_TAG"

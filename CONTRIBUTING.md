@@ -59,6 +59,7 @@ yarn lint
 yarn typecheck
 yarn test
 yarn prepare
+yarn docs:check
 yarn example build:android
 yarn example build:ios
 ```
@@ -107,19 +108,100 @@ A scope is optional, for example `chore(example): update the example app`.
 
 ## Releases
 
-Releases are managed with release-it and conventional-changelog:
+The owner runs release-it locally to update the version, generate conventional
+release notes in `CHANGELOG.md` (header `# Changelog`), commit
+`chore: release ${version}`, tag `v${version}`, push, and create the GitHub
+release. GitHub notes include the [migration guide](MIGRATION.md). release-it
+has `npm.publish: false`: the tag-triggered workflow publishes the package.
+The first run creates the changelog with history; do not seed it by hand.
+
+Run from a clean, up-to-date `master` with a configured upstream and passing CI.
+Use `gh auth login` beforehand; the command below supplies a GitHub
+credential from the owner's CLI session. Review the version and generated notes
+with a dry run before making a release:
 
 ```sh
-yarn release
+yarn lint
+yarn typecheck
+yarn test --watchman=false
+yarn prepare
+yarn docs:check
+yarn pack --out /tmp/react-native-pdf-thumbnail.tgz
+GITHUB_TOKEN=$(gh auth token) yarn release --preRelease=rc --dry-run
 ```
 
-This runs `release-it --only-version`: it prompts for the version and automates
-the remaining release steps, including the Git commit, `v${version}` tag, npm
-publication, and GitHub release. Run it only when a release is intended and the
-checks have passed.
+The first candidate must be **2.0.0-rc.1**. `preReleaseBase: 1` starts candidate
+numbering at 1; the merged breaking commits recommend the major bump. Verify
+that exact version in the dry-run output (or specify `2.0.0-rc.1` explicitly).
+A dry run previews writes and pushes but still needs network access for release
+checks. Review the [first-RC checklist](#first-rc-checklist) before proceeding.
 
-Phase 1 lands unreleased. Its packaging changes ship in 2.0.0 with Phase 2;
-maintenance releases for 1.x remain on the `1.x` branch.
+To release a candidate, or later a stable version:
+
+```sh
+GITHUB_TOKEN=$(gh auth token) yarn release --preRelease=rc
+# When the candidate has been tried in real apps and is ready for latest:
+GITHUB_TOKEN=$(gh auth token) yarn release
+```
+
+Subsequent candidates increment `rc.N` when fixes are needed. For the stable
+release, verify that the selected version is `2.0.0`. Keep 1.3.x maintenance
+releases on the `1.x` branch; cherry-pick fixes there manually.
+
+### One-time trusted-publisher setup
+
+On npmjs.com, open the existing `react-native-pdf-thumbnail` package settings
+and configure a GitHub Actions trusted publisher with these exact values:
+
+| Setting              | Value                        |
+| -------------------- | ---------------------------- |
+| Organization or user | `songsterq`                  |
+| Repository           | `react-native-pdf-thumbnail` |
+| Workflow filename    | `release.yml`                |
+| Environment          | `npm-release`                |
+| Allowed action       | `npm publish`                |
+
+The GitHub `npm-release` environment was created with required reviewer
+`songsterq` (self-review allowed) and deployments restricted to tags matching
+`v*`. Confirm these settings before the first publish. The workflow grants
+`contents: read` and `id-token: write`; npm >= 11.5.1 exchanges the GitHub OIDC
+identity for publish authorization. No long-lived npm publishing credential is
+needed in local release-it configuration or Actions secrets.
+
+**After the first successful workflow publish**, set npm Publishing access to
+**"Require two-factor authentication and disallow tokens"**, then revoke any
+old automation tokens. Do this after proving trusted publishing works.
+
+### First-RC checklist
+
+1. Merge the docs/release changes and require the existing CI checks to pass.
+   Capture the Android and iOS demo screenshots in `docs/images/` before release.
+2. Complete the trusted-publisher setup above and inspect the packed file list:
+   no fixtures, docs, plans, scripts or example app should ship. README and
+   standard package/license files may be included automatically by the packer.
+3. Run the checks and release-it dry run above. Inspect the proposed
+   `2.0.0-rc.1`, `v2.0.0-rc.1`, release commit, changelog and GitHub notes. The
+   npm publish must occur only in Actions, under dist-tag `next`.
+4. Run the owner candidate command. It pushes the release tag, triggering
+   `.github/workflows/release.yml`. In the Actions tab, review that tag's
+   **Release** run and approve the **npm-release** deployment. Each publish
+   requires this approval, including the first candidate and the final release.
+5. Confirm the workflow checks npm's version, rejects a mismatched package/tag,
+   builds with `yarn prepare`, and publishes using
+   `npm publish --provenance --access public`. Versions with a prerelease part
+   go to `next`; stable versions go to `latest`.
+6. Check `npm view react-native-pdf-thumbnail@next version dist.integrity dist.attestations`
+   and the npm package page for the expected version and provenance linked to
+   this workflow/tag. Confirm the existing `latest` tag remains on 1.3.2 during
+   candidate testing. Install `@next` in real RN and Expo development builds.
+7. Apply the npm disallow-tokens setting above. Publish further candidates only
+   as needed; publish 2.0.0 to `latest` through this same approval flow once clean.
+
+If publication fails, fix the cause and rerun the failed workflow for the same
+tag only after checking whether npm already contains that version. npm versions
+cannot be overwritten. If it was published, make a new version for corrections.
+GitHub release creation and npm publication are separate operations: creating a
+GitHub release does not prove that the package has reached npm.
 
 ## Pull requests
 
