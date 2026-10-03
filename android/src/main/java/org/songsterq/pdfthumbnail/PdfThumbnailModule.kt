@@ -2,7 +2,6 @@ package org.songsterq.pdfthumbnail
 
 import android.content.ContentResolver
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
@@ -116,14 +115,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
         bitmap.eraseColor(Color.WHITE)
         currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
-        val bitmapWhiteBG = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        try {
-          val canvas = Canvas(bitmapWhiteBG)
-          canvas.drawBitmap(bitmap, 0f, 0f, null)
-          return writeBitmap(bitmapWhiteBG, width, height, filePath, page, quality)
-        } finally {
-          bitmapWhiteBG.recycle()
-        }
+        return writeBitmap(bitmap, width, height, filePath, page, quality)
       } finally {
         bitmap.recycle()
       }
