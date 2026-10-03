@@ -1,7 +1,7 @@
 {
   "name": "react-native-pdf-thumbnail",
   "version": "1.3.2",
-  "description": "Generate thumbnail for PDF files",
+  "description": "Generate bounded JPEG thumbnails from local PDFs with React Native New Architecture on iOS and Android.",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
   "types": "./lib/typescript/commonjs/src/index.d.ts",
@@ -29,16 +29,25 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
-    "release": "release-it --only-version"
+    "release": "release-it --only-version",
+    "docs:check": "node scripts/check-doc-samples.mjs"
   },
   "keywords": [
     "react-native",
     "pdf",
     "thumbnail",
+    "pdfkit",
+    "pdfrenderer",
+    "turbo-module",
+    "new-architecture",
+    "expo",
     "ios",
     "android"
   ],
-  "repository": "https://github.com/songsterq/react-native-pdf-thumbnail",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/songsterq/react-native-pdf-thumbnail.git"
+  },
   "author": "Song Qian <songsterq@gmail.com> (https://github.com/songsterq)",
   "license": "MIT",
   "bugs": {
@@ -111,18 +120,22 @@
       "tagName": "v${version}"
     },
     "npm": {
-      "publish": true
+      "publish": false
     },
     "github": {
-      "release": true
+      "release": true,
+      "releaseNotes": "node scripts/release-notes.mjs ${version}"
     },
     "plugins": {
       "@release-it/conventional-changelog": {
         "preset": {
           "name": "angular"
-        }
+        },
+        "infile": "CHANGELOG.md",
+        "header": "# Changelog"
       }
-    }
+    },
+    "preReleaseBase": 1
   },
   "prettier": {
     "quoteProps": "consistent",
