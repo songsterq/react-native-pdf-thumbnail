@@ -47,8 +47,17 @@ updates:
       - dependency-name: '@types/react'
         update-types:
           ['version-update:semver-major', 'version-update:semver-minor']
-      # Babel majors follow @react-native/babel-preset.
+      # Babel, Jest and ESLint majors follow the React Native toolchain
+      # (@react-native/babel-preset, jest-preset and eslint-config).
       - dependency-name: '@babel/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'jest'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@jest/*'
+        update-types: ['version-update:semver-major']
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@eslint/*'
         update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
