@@ -16,7 +16,6 @@ Note: This module **does not** work in Expo Go.
 Version 2.x requires **React Native >= 0.76 with the New Architecture enabled**.
 Use version 1.x for apps using the legacy architecture.
 
-
 ```sh
 npm install react-native-pdf-thumbnail
 ```
@@ -27,50 +26,112 @@ CI smoke-tests React Native 0.76.9 on Android and the latest React Native on
 Android and iOS. React Native 0.76–0.78 iOS builds are blocked with current Xcode
 by an upstream `fmt` compilation issue.
 
-
 ## Usage
 
-```js
-import PdfThumbnail from 'react-native-pdf-thumbnail';
+```ts
+import PdfThumbnail, {
+  PdfThumbnailErrorCodes,
+  type GenerateOptions,
+  type PdfThumbnailErrorCode,
+  type ThumbnailResult,
+} from 'react-native-pdf-thumbnail';
 
-// For iOS, the filePath can be a file URL.
-// For Android, the filePath can be either a content URI, a file URI or an absolute path.
-const filePath = 'file:///mnt/sdcard/myDocument.pdf';
-const page = 0;
+// Both platforms accept file:// URIs and absolute paths.
+// Android also accepts content:// URIs from document providers.
+const filePath = 'file:///path/to/myDocument.pdf';
+const options: GenerateOptions = { quality: 80, maxWidth: 200, maxHeight: 200 };
 
-// The thumbnail image is stored in caches directory, file uri is returned.
-// Image dimensions are also available to help you display it correctly.
-const { uri, width, height } = await PdfThumbnail.generate(filePath, page);
+const thumbnail: ThumbnailResult = await PdfThumbnail.generate(
+  filePath,
+  0,
+  options
+);
+const pages = await PdfThumbnail.generateAllPages(filePath, options);
 
-// Generate thumbnails for all pages, returning an array of the object above.
-const results = await PdfThumbnail.generateAllPages(filePath);
+// 1.x-style quality arguments remain supported; omitted quality defaults to 80.
+await PdfThumbnail.generate(filePath, 0);
+await PdfThumbnail.generate(filePath, 0, 95);
+await PdfThumbnail.generateAllPages(filePath, 90);
 
-// Default compression quality is 80, you can optionally specify a quality between 0 and 100.
-const { uri, width, height } = await PdfThumbnail.generate(filePath, page, 95);
-const results = await PdfThumbnail.generateAllPages(filePath, 90);
+try {
+  await PdfThumbnail.generate(filePath, 0, options);
+} catch (error) {
+  const failure = error as { code?: PdfThumbnailErrorCode; message: string };
+  if (failure.code === PdfThumbnailErrorCodes.PASSWORD_PROTECTED) {
+    console.log('This PDF requires a password.');
+  }
+}
 ```
 
-## Error codes
+### API
 
-Both methods return promises. Handle failures with `try`/`catch` or `.catch()`;
-rejections include a `code` and a human-readable message.
+```ts
+type ThumbnailResult = { uri: string; width: number; height: number };
+type GenerateOptions = { quality?: number; maxWidth?: number; maxHeight?: number };
 
-| Code                 | Android                                                                                                                                                           | iOS (unchanged)                                       |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `FILE_NOT_FOUND`     | Unsupported path form or no file descriptor returned.                                                                                                             | Invalid file URL, or PDFKit cannot open the document. |
-| `INVALID_PAGE`       | Page index is outside the document's page range.                                                                                                                  | PDFKit cannot retrieve the requested page.            |
-| `INTERNAL_ERROR`     | File I/O failures (including missing files and corrupt PDFs), permission denial when opening a URI, JPEG compression/write failures, or other runtime exceptions. | Cannot create or write JPEG image data.               |
-| `PASSWORD_PROTECTED` | New in 1.3.2: Android's PDF renderer rejects a password-protected PDF or unsupported PDF security.                                                                | Not used.                                             |
-| `OUT_OF_MEMORY`      | New in 1.3.2: insufficient memory while generating thumbnails.                                                                                                    | Not used.                                             |
+PdfThumbnail.generate(filePath: string, page: number, options?: GenerateOptions | number): Promise<ThumbnailResult>;
+PdfThumbnail.generateAllPages(filePath: string, options?: GenerateOptions | number): Promise<ThumbnailResult[]>;
+```
 
-Password/security and memory failures on Android reject the promise so the app
-can handle them. iOS password-protected document handling is unchanged.
+`page` is a zero-based integer. Negative, fractional and non-finite pages reject
+with `INVALID_PAGE` in JavaScript before native rendering; an index outside the
+document also rejects with `INVALID_PAGE`. Unlike 1.x, fractional pages are never
+silently truncated.
+
+`quality` is a number clamped to 0–100, default 80 (including infinities). The native JPEG encoder
+uses its integer part, as in 1.x. A bare number means quality for either method.
+`maxWidth` and `maxHeight` are optional positive finite numbers. Invalid options,
+quality (`NaN` or a non-number) or sizes reject with a JavaScript `TypeError` (no PDF error code).
+Omit a size to leave that axis unlimited; passing zero is invalid in the public API.
+
+Use size limits for thumbnails, especially with very large PDFs: both platforms
+render directly into a bitmap of the target size. There is no default limit and
+no upscaling. For displayed page dimensions `w` and `h`, the scale is
+`min(1, maxWidth / w, maxHeight / h)` with omitted limits ignored. Each output
+dimension is `max(1, round(dimension × scale))`. A 612×792 page with `maxWidth: 200`
+produces 200×259 pixels; adding `maxHeight: 100` produces 77×100 pixels.
+
+Results are JPEG files in the app's cache directory. `uri` is a plain `file://`
+URI; `width` and `height` are the actual JPEG **pixel dimensions**, independent of
+screen density. Without limits, rendering uses 1 pixel per PDF point. Both
+platforms display the **crop box**, falling back to the media box when absent,
+and apply the page's `/Rotate`. A rotated 612×792 page displays at 792×612.
+The background is white. `generateAllPages` preserves document page order.
+There is no thumbnail lookup cache; apps can retain results and manage their
+lifetime as needed.
+
+### Error codes
+
+Both methods return promises. PDF failures include a `code` and a human-readable
+`message` naming the input file (and page when relevant). `PdfThumbnailErrorCode`
+is a TypeScript union; `PdfThumbnailErrorCodes` is the frozen constant object
+containing these same codes.
+
+| Code                 | When                                                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `UNSUPPORTED_URI`    | Unsupported scheme or path form: remote URLs, `ph://`, relative paths, or empty paths. iOS also rejects `content://`. |
+| `FILE_NOT_FOUND`     | The file does not exist or cannot be opened for reading, including permission failures.                               |
+| `INVALID_FILE`       | The file can be read but is not a readable PDF.                                                                       |
+| `PASSWORD_PROTECTED` | A user password is required to open the PDF. Android also reports this for unsupported PDF security.                  |
+| `INVALID_PAGE`       | The page is not an integer ≥ 0, or is outside the document's page range.                                              |
+| `OUT_OF_MEMORY`      | Android cannot allocate memory for rendering. iOS allocation failure cannot reliably be caught.                       |
+| `INTERNAL_ERROR`     | JPEG creation/writing or another unexpected failure.                                                                  |
+
+Encrypted PDFs with only an owner password (empty user password) render normally.
+There is no password argument to unlock PDFs. Download remote files in your app
+before calling this module; both platforms reject remote URLs without loading them.
+Local file URIs use an empty host or `localhost` and an absolute file path.
+
+These 2.x changes are deliberate: unsupported paths, missing files and invalid
+PDFs have distinct codes; iOS rejects locked PDFs instead of returning a blank
+image; iOS uses the crop box; and fractional page indexes are rejected.
 
 ## Demo
 
 The React Native 0.87.1 example uses a PDF document picker. **Pick PDF File**
-generates a thumbnail and displays its URI and dimensions. **Generate all pages**
-uses the selected PDF and displays the page count.
+generates a thumbnail and displays its URI and pixel dimensions. Choose a maximum
+output width of 100, 200 or 400 pixels before generating. **Generate all pages**
+uses that width and displays a grid with each page's dimensions and the page count.
 
 Use Node 24 (see `.nvmrc`) and Yarn 4.11.0. From the repository root:
 
