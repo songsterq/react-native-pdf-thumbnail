@@ -72,6 +72,17 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def fixtureAssetsDir = layout.buildDirectory.dir("generated/fixture-assets").get().asFile
+
+def copyFixtureAssets = tasks.register("copyFixtureAssets", Copy) {
+    from(file("../../../fixtures")) {
+        include "*.pdf"
+    }
+    into fixtureAssetsDir
+}
+
+preBuild.dependsOn copyFixtureAssets
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -84,6 +95,10 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+    }
+    // Bundle only the fixture PDFs (not README, JSON or golden images) as root-level assets.
+    sourceSets {
+        main.assets.srcDirs += [fixtureAssetsDir]
     }
     signingConfigs {
         debug {

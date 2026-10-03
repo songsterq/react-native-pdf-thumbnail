@@ -15,6 +15,8 @@ import {
 } from '@react-native-documents/picker';
 import PdfThumbnail, { type ThumbnailResult } from 'react-native-pdf-thumbnail';
 
+import SelfTest from './SelfTest';
+
 type ThumbnailError = { code: string; message: string };
 
 function describeError(error: unknown): ThumbnailError {
@@ -31,6 +33,7 @@ function describeError(error: unknown): ThumbnailError {
 }
 
 export default function App() {
+  const [selfTest, setSelfTest] = useState(false);
   const [fileUri, setFileUri] = useState<string>();
   const [thumbnail, setThumbnail] = useState<ThumbnailResult>();
   const [thumbnails, setThumbnails] = useState<ThumbnailResult[]>([]);
@@ -85,8 +88,16 @@ export default function App() {
     }
   };
 
+  if (selfTest) return <SelfTest />;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <Button
+        title="Run self-test"
+        testID="run-selftest"
+        onPress={() => setSelfTest(true)}
+        disabled={busy}
+      />
       <View style={styles.thumbnailPreview}>
         {thumbnail ? (
           <>
@@ -157,6 +168,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     padding: 24,
+    paddingTop: 60,
   },
   sizeSelector: {
     flexDirection: 'row',
