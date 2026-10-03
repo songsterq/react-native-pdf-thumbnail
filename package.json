@@ -62,7 +62,7 @@
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^9.39.5",
-    "@jest/globals": "^29.7.0",
+    "@jest/globals": "^30.5.2",
     "@react-native/babel-preset": "0.87.1",
     "@react-native/eslint-config": "0.87.1",
     "@react-native/jest-preset": "0.87.1",
