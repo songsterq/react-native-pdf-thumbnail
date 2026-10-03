@@ -56,14 +56,24 @@ can handle them. iOS password-protected document handling is unchanged.
 
 ## Demo
 
-The example app contains a document picker, it generates and displays a thumbnail for the selected PDF file.
+The React Native 0.87.1 example uses a PDF document picker. **Pick PDF File**
+generates a thumbnail and displays its URI and dimensions. **Generate all pages**
+uses the selected PDF and displays the page count.
 
-To run it:
+Use Node 24 (see `.nvmrc`) and Yarn 4.11.0. From the repository root:
+
 ```sh
-yarn
+corepack enable
+yarn install --immutable
+yarn example start
+# In a second terminal:
 yarn example ios
+# Or:
 yarn example android
 ```
+
+The iOS command installs pods automatically. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for native setup, build commands, and checks.
 
 iOS | Android
 ------- | ---
