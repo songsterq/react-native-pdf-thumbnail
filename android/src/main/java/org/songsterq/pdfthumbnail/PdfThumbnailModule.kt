@@ -3,6 +3,7 @@ package org.songsterq.pdfthumbnail
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -12,11 +13,14 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.module.annotations.ReactModule
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.Random
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import kotlin.math.floor
+import kotlin.math.min
 
 @ReactModule(name = PdfThumbnailModule.NAME)
 class PdfThumbnailModule(reactContext: ReactApplicationContext) :
@@ -26,36 +30,36 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
     Thread(runnable, "PdfThumbnail-renderer")
   }
 
-  override fun generate(filePath: String, page: Double, quality: Double, promise: Promise) {
-    submit(promise) {
+  override fun generate(filePath: String, page: Double, quality: Double, maxWidth: Double, maxHeight: Double, promise: Promise) {
+    submit(filePath, promise) {
       withRenderer(filePath, promise) { renderer ->
         val pageIndex = page.toInt()
-        if (!page.isFinite() || pageIndex < 0 || pageIndex >= renderer.pageCount) {
-          val invalidPage = if (page.isFinite()) pageIndex.toString() else page.toString()
-          throw ThumbnailException("INVALID_PAGE", "Page number $invalidPage is invalid, file has ${renderer.pageCount} pages")
+        if (!page.isFinite() || page != floor(page) || pageIndex < 0 || pageIndex >= renderer.pageCount) {
+          val invalidPage = page.toString()
+          throw ThumbnailException("INVALID_PAGE", "Page number $invalidPage is invalid for file $filePath, file has ${renderer.pageCount} pages")
         }
-        renderPage(renderer, pageIndex, filePath, quality.toInt())
+        renderPage(renderer, pageIndex, filePath, quality.toInt(), maxWidth, maxHeight)
       }
     }
   }
 
-  override fun generateAllPages(filePath: String, quality: Double, promise: Promise) {
-    submit(promise) {
+  override fun generateAllPages(filePath: String, quality: Double, maxWidth: Double, maxHeight: Double, promise: Promise) {
+    submit(filePath, promise) {
       withRenderer(filePath, promise) { renderer ->
         val result = Arguments.createArray()
         for (page in 0 until renderer.pageCount) {
-          result.pushMap(renderPage(renderer, page, filePath, quality.toInt()))
+          result.pushMap(renderPage(renderer, page, filePath, quality.toInt(), maxWidth, maxHeight))
         }
         result
       }
     }
   }
 
-  private fun submit(promise: Promise, action: () -> Unit) {
+  private fun submit(filePath: String, promise: Promise, action: () -> Unit) {
     try {
       executor.execute { action() }
     } catch (ex: RejectedExecutionException) {
-      promise.reject("INTERNAL_ERROR", ex)
+      promise.reject("INTERNAL_ERROR", "Cannot generate thumbnail for file $filePath: ${ex.message}", ex)
     }
   }
 
@@ -76,27 +80,40 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
     var descriptor: ParcelFileDescriptor? = null
     var renderer: PdfRenderer? = null
     val result = try {
-      val openedDescriptor = getParcelFileDescriptor(filePath)
-        ?: throw ThumbnailException("FILE_NOT_FOUND", "File $filePath not found")
+      val openedDescriptor = try {
+        getParcelFileDescriptor(filePath)
+          ?: throw ThumbnailException("FILE_NOT_FOUND", "File $filePath cannot be opened for reading")
+      } catch (ex: FileNotFoundException) {
+        throw ThumbnailException("FILE_NOT_FOUND", "File $filePath cannot be opened for reading", ex)
+      } catch (ex: SecurityException) {
+        throw ThumbnailException("FILE_NOT_FOUND", "File $filePath cannot be opened for reading", ex)
+      } catch (ex: IOException) {
+        throw ThumbnailException("FILE_NOT_FOUND", "File $filePath cannot be opened for reading", ex)
+      }
       descriptor = openedDescriptor
       val openedRenderer = try {
         PdfRenderer(openedDescriptor)
       } catch (ex: SecurityException) {
-        throw ThumbnailException("PASSWORD_PROTECTED", "File $filePath is password-protected or uses an unsupported security scheme", ex)
+        throw ThumbnailException("PASSWORD_PROTECTED", "File $filePath requires a password or uses unsupported PDF security", ex)
+      } catch (ex: IOException) {
+        throw ThumbnailException("INVALID_FILE", "File $filePath is not a readable PDF", ex)
       }
       renderer = openedRenderer
+      if (openedRenderer.pageCount == 0) {
+        throw ThumbnailException("INVALID_FILE", "File $filePath has no readable PDF pages")
+      }
       action(openedRenderer)
     } catch (ex: ThumbnailException) {
       promise.reject(ex.code, ex.message, ex)
       return
     } catch (ex: IOException) {
-      promise.reject("INTERNAL_ERROR", ex)
+      promise.reject("INTERNAL_ERROR", "Cannot generate thumbnail for file $filePath: ${ex.message}", ex)
       return
     } catch (ex: OutOfMemoryError) {
       promise.reject("OUT_OF_MEMORY", "Not enough memory to render file $filePath", ex)
       return
     } catch (ex: Exception) {
-      promise.reject("INTERNAL_ERROR", ex)
+      promise.reject("INTERNAL_ERROR", "Cannot generate thumbnail for file $filePath: ${ex.message}", ex)
       return
     } finally {
       closeQuietly(renderer)
@@ -114,32 +131,58 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
   }
 
   private fun getParcelFileDescriptor(filePath: String): ParcelFileDescriptor? {
-    val uri = Uri.parse(filePath)
-    if (ContentResolver.SCHEME_CONTENT == uri.scheme || ContentResolver.SCHEME_FILE == uri.scheme) {
-      return this.reactApplicationContext.contentResolver.openFileDescriptor(uri, "r")
-    } else if (filePath.startsWith("/")) {
-      val file = File(filePath)
-      return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+    if (filePath.startsWith("/")) {
+      return ParcelFileDescriptor.open(File(filePath), ParcelFileDescriptor.MODE_READ_ONLY)
     }
-    return null
+    val uri = Uri.parse(filePath)
+    when {
+      filePath.startsWith("content://") && uri.scheme == ContentResolver.SCHEME_CONTENT ->
+        return reactApplicationContext.contentResolver.openFileDescriptor(uri, "r")
+      filePath.startsWith("file://") && uri.scheme == ContentResolver.SCHEME_FILE &&
+        (uri.authority.isNullOrEmpty() || uri.authority == "localhost") &&
+        uri.path?.startsWith("/") == true ->
+        return ParcelFileDescriptor.open(File(uri.path!!), ParcelFileDescriptor.MODE_READ_ONLY)
+      else -> throw ThumbnailException("UNSUPPORTED_URI", "Unsupported URI for file $filePath; use an absolute path, file:// URI or content:// URI")
+    }
   }
 
-  private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String, quality: Int): WritableMap {
-    val currentPage = pdfRenderer.openPage(page)
+  private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String, quality: Int, maxWidth: Double, maxHeight: Double): WritableMap {
     try {
-      val width = currentPage.width
-      val height = currentPage.height
-      val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-      try {
-        bitmap.eraseColor(Color.WHITE)
-        currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-
-        return writeBitmap(bitmap, width, height, filePath, page, quality)
-      } finally {
-        bitmap.recycle()
+      pdfRenderer.openPage(page).use { currentPage ->
+        // PdfRenderer/PDFium exposes the effective crop box in displayed orientation:
+        // width/height and rendered content already include intrinsic /Rotate.
+        // The matrix only scales these displayed coordinates; rotating again would
+        // double-rotate the page. Verify both rotations and offset crops on devices.
+        val pageWidth = currentPage.width
+        val pageHeight = currentPage.height
+        if (pageWidth <= 0 || pageHeight <= 0) {
+          throw ThumbnailException("INVALID_FILE", "File $filePath, page $page has invalid dimensions")
+        }
+        var scale = 1.0
+        if (maxWidth > 0) scale = min(scale, maxWidth / pageWidth)
+        if (maxHeight > 0) scale = min(scale, maxHeight / pageHeight)
+        // Same positive rounding as Math.round in JS and floor(x + 0.5) on iOS.
+        val width = maxOf(1, floor(pageWidth * scale + 0.5).toInt())
+        val height = maxOf(1, floor(pageHeight * scale + 0.5).toInt())
+        val matrix = Matrix().apply {
+          setScale(width.toFloat() / pageWidth, height.toFloat() / pageHeight)
+        }
+        // Allocate only the final bitmap, including for huge pages.
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        try {
+          bitmap.eraseColor(Color.WHITE)
+          currentPage.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+          return writeBitmap(bitmap, width, height, filePath, page, quality)
+        } finally {
+          bitmap.recycle()
+        }
       }
-    } finally {
-      currentPage.close()
+    } catch (ex: ThumbnailException) {
+      throw ex
+    } catch (ex: OutOfMemoryError) {
+      throw ThumbnailException("OUT_OF_MEMORY", "Not enough memory to render file $filePath, page $page", ex)
+    } catch (ex: Exception) {
+      throw ThumbnailException("INTERNAL_ERROR", "Cannot render or write file $filePath, page $page: ${ex.message}", ex)
     }
   }
 
