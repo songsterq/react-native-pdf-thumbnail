@@ -5,13 +5,17 @@ runs:
   using: composite
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
 
+    - name: Enable Corepack
+      run: corepack enable
+      shell: bash
+
     - name: Cache dependencies
       id: yarn-cache
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: |
           **/node_modules
@@ -23,5 +27,8 @@ runs:
 
     - name: Install dependencies
       if: steps.yarn-cache.outputs.cache-hit != 'true'
+      # Pods are installed explicitly by the iOS build jobs.
+      env:
+        POD_INSTALL: '0'
       run: yarn install --immutable
       shell: bash
