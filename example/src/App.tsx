@@ -33,7 +33,8 @@ function describeError(error: unknown): ThumbnailError {
 export default function App() {
   const [fileUri, setFileUri] = useState<string>();
   const [thumbnail, setThumbnail] = useState<ThumbnailResult>();
-  const [pageCount, setPageCount] = useState<number>();
+  const [thumbnails, setThumbnails] = useState<ThumbnailResult[]>([]);
+  const [maxWidth, setMaxWidth] = useState(200);
   const [error, setError] = useState<ThumbnailError>();
   const [busy, setBusy] = useState(false);
 
@@ -47,8 +48,10 @@ export default function App() {
       }
       setFileUri(document.uri);
       setThumbnail(undefined);
-      setPageCount(undefined);
-      setThumbnail(await PdfThumbnail.generate(document.uri, 0, 100));
+      setThumbnails([]);
+      setThumbnail(
+        await PdfThumbnail.generate(document.uri, 0, { quality: 100, maxWidth })
+      );
     } catch (e) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) {
         return;
@@ -66,11 +69,14 @@ export default function App() {
     }
     setBusy(true);
     setError(undefined);
-    setPageCount(undefined);
+    setThumbnails([]);
     try {
-      const results = await PdfThumbnail.generateAllPages(fileUri, 100);
+      const results = await PdfThumbnail.generateAllPages(fileUri, {
+        quality: 100,
+        maxWidth,
+      });
       setThumbnail(results[0]);
-      setPageCount(results.length);
+      setThumbnails(results);
     } catch (e) {
       setThumbnail(undefined);
       setError(describeError(e));
@@ -94,8 +100,10 @@ export default function App() {
             <Text style={styles.thumbnailInfo}>height: {thumbnail.height}</Text>
           </>
         ) : null}
-        {pageCount !== undefined ? (
-          <Text style={styles.thumbnailInfo}>Page count: {pageCount}</Text>
+        {thumbnails.length > 0 ? (
+          <Text style={styles.thumbnailInfo}>
+            Page count: {thumbnails.length}
+          </Text>
         ) : null}
         {error ? (
           <>
@@ -107,12 +115,39 @@ export default function App() {
         ) : null}
         {busy ? <Text>Generating…</Text> : null}
       </View>
+      <Text>Maximum output width: {maxWidth} pixels (no upscaling)</Text>
+      <View style={styles.sizeSelector}>
+        {[100, 200, 400].map((size) => (
+          <Button
+            key={size}
+            title={`${size}px${size === maxWidth ? ' ✓' : ''}`}
+            disabled={busy}
+            onPress={() => setMaxWidth(size)}
+          />
+        ))}
+      </View>
+      <Text>Choose a size, then pick a PDF or generate all pages.</Text>
       <Button onPress={pickPdf} title="Pick PDF File" disabled={busy} />
       <Button
         onPress={generateAllPages}
         title="Generate all pages"
         disabled={busy || !fileUri}
       />
+      <View style={styles.grid}>
+        {thumbnails.map((result, page) => (
+          <View key={result.uri} style={styles.gridCell}>
+            <Image
+              source={result}
+              resizeMode="contain"
+              style={styles.gridImage}
+            />
+            <Text>Page {page + 1}</Text>
+            <Text>
+              {result.width} × {result.height}px
+            </Text>
+          </View>
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -121,8 +156,25 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     padding: 24,
+  },
+  sizeSelector: {
+    flexDirection: 'row',
+    marginVertical: 12,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+  },
+  gridCell: {
+    width: 140,
+    alignItems: 'center',
+    padding: 8,
+  },
+  gridImage: {
+    width: 120,
+    height: 160,
   },
   thumbnailPreview: {
     padding: 20,
