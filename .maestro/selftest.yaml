@@ -1,0 +1,17 @@
+appId: org.songsterq.pdfthumbnail.example
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: run-selftest
+- extendedWaitUntil:
+    visible:
+      id: selftest-summary
+      text: '28/28 passed'
+    timeout: 300000
+- assertVisible:
+    id: selftest-summary
+    text: '28/28 passed'
+# The summary counts all cases (including offscreen rows) after export completes.
+- assertNotVisible: '(?s).*FAIL.*'
+- takeScreenshot: selftest-summary

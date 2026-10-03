@@ -102,6 +102,7 @@ export default function App() {
         {thumbnail ? (
           <>
             <Image
+              testID="thumbnail"
               source={thumbnail}
               resizeMode="contain"
               style={styles.thumbnailImage}
@@ -137,8 +138,14 @@ export default function App() {
           />
         ))}
       </View>
+      {fileUri ? <Text testID="picked-uri">{fileUri}</Text> : null}
       <Text>Choose a size, then pick a PDF or generate all pages.</Text>
-      <Button onPress={pickPdf} title="Pick PDF File" disabled={busy} />
+      <Button
+        testID="pick-pdf"
+        onPress={pickPdf}
+        title="Pick PDF File"
+        disabled={busy}
+      />
       <Button
         onPress={generateAllPages}
         title="Generate all pages"

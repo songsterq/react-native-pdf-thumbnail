@@ -1,0 +1,30 @@
+# Android only, local best-effort flow. Before running:
+# adb push fixtures/normal.pdf /sdcard/Download/normal.pdf
+# Uses the English DocumentsUI labels; deliberately excluded from CI.
+appId: org.songsterq.pdfthumbnail.example
+tags:
+  - manual
+  - android
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: pick-pdf
+- tapOn:
+    text: 'Show roots'
+    optional: true
+- tapOn:
+    text: 'Downloads'
+    optional: true
+- tapOn: 'normal.pdf'
+- extendedWaitUntil:
+    visible:
+      id: thumbnail
+    timeout: 30000
+- assertVisible:
+    id: picked-uri
+    text: 'content://.*'
+- assertVisible:
+    id: thumbnail
+- assertNotVisible: '(?s).*Error code:.*'
+- takeScreenshot: picker-thumbnail
