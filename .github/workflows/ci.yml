@@ -2,17 +2,26 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - master
+      - 1.x
   pull_request:
     branches:
-      - main
+      - master
+      - 1.x
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -27,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -39,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Setup
         uses: ./.github/actions/setup
@@ -53,13 +62,13 @@ jobs:
       TURBO_CACHE_DIR: .turbo/android
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Setup
         uses: ./.github/actions/setup
 
       - name: Cache turborepo for Android
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ${{ env.TURBO_CACHE_DIR }}
           key: ${{ runner.os }}-turborepo-android-${{ hashFiles('**/yarn.lock') }}
@@ -76,10 +85,10 @@ jobs:
 
       - name: Install JDK
         if: env.turbo_cache_hit != 1
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v6
         with:
           distribution: 'zulu'
-          java-version: '11'
+          java-version: '17'
 
       - name: Finalize Android SDK
         if: env.turbo_cache_hit != 1
@@ -88,7 +97,7 @@ jobs:
 
       - name: Cache Gradle
         if: env.turbo_cache_hit != 1
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.gradle/wrapper
@@ -103,17 +112,22 @@ jobs:
 
   build-ios:
     runs-on: macos-latest
+    # The RN 0.72 example cannot build with current toolchains: its pod scripts
+    # pass `quirks_mode` to JSON.parse (unsupported by current json gems) and its
+    # 12.4 deployment target is below what current Xcode accepts. The library's iOS
+    # build is covered by the `smoke` jobs; the example is regenerated in Phase 1.
+    continue-on-error: true
     env:
       TURBO_CACHE_DIR: .turbo/ios
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Setup
         uses: ./.github/actions/setup
 
       - name: Cache turborepo for iOS
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ${{ env.TURBO_CACHE_DIR }}
           key: ${{ runner.os }}-turborepo-ios-${{ hashFiles('**/yarn.lock') }}
@@ -131,7 +145,7 @@ jobs:
       - name: Cache cocoapods
         if: env.turbo_cache_hit != 1
         id: cocoapods-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             **/ios/Pods
@@ -149,3 +163,113 @@ jobs:
       - name: Build example for iOS
         run: |
           yarn turbo run build:ios --cache-dir="${{ env.TURBO_CACHE_DIR }}"
+
+  smoke:
+    name: Smoke RN ${{ matrix.rn }} (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rn: ['0.76.9', 'latest']
+        platform: [android, ios]
+        include:
+          - platform: android
+            os: ubuntu-latest
+          - platform: ios
+            os: macos-latest
+        exclude:
+          # RN 0.76's bundled fmt fails to compile with current Xcode (consteval
+          # errors), independent of this library.
+          - rn: '0.76.9'
+            platform: ios
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Install JDK
+        if: matrix.platform == 'android'
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Build and pack library
+        shell: bash
+        run: |
+          yarn prepare
+          # yarn pack runs only `prepack` (none here), unlike npm pack which rebuilds.
+          yarn pack --out "$RUNNER_TEMP/react-native-pdf-thumbnail.tgz"
+          echo "LIBRARY_TARBALL=$RUNNER_TEMP/react-native-pdf-thumbnail.tgz" >> "$GITHUB_ENV"
+          echo "SMOKE_APP=$RUNNER_TEMP/SmokeApp" >> "$GITHUB_ENV"
+
+      - name: Generate fresh app
+        working-directory: ${{ runner.temp }}
+        env:
+          RN_VERSION: ${{ matrix.rn }}
+        run: >-
+          npx @react-native-community/cli@latest init SmokeApp
+          --version "$RN_VERSION" --skip-git-init --install-pods false --pm npm
+
+      - name: Install packed library
+        working-directory: ${{ env.SMOKE_APP }}
+        run: npm install "$LIBRARY_TARBALL"
+
+      - name: Exercise library import
+        working-directory: ${{ env.SMOKE_APP }}
+        shell: bash
+        run: |
+          cat > App.tsx <<'APP'
+          import React, {useEffect} from 'react';
+          import {Text, View} from 'react-native';
+          import PdfThumbnail from 'react-native-pdf-thumbnail';
+
+          export default function App() {
+            useEffect(() => {
+              PdfThumbnail.generate('file:///smoke.pdf', 0).catch(console.warn);
+            }, []);
+            return <View><Text>PDF thumbnail smoke app</Text></View>;
+          }
+          APP
+
+      # Debug native builds normally skip bundling, so exercise Metro explicitly.
+      - name: Bundle app with Metro
+        working-directory: ${{ env.SMOKE_APP }}
+        env:
+          SMOKE_PLATFORM: ${{ matrix.platform }}
+        run: >-
+          npx react-native bundle --platform "$SMOKE_PLATFORM" --dev false
+          --entry-file index.js --bundle-output "$RUNNER_TEMP/smoke.bundle"
+          --assets-dest "$RUNNER_TEMP/smoke-assets"
+
+      - name: Build Android app
+        if: matrix.platform == 'android'
+        working-directory: ${{ env.SMOKE_APP }}/android
+        run: ./gradlew assembleDebug -PreactNativeArchitectures=arm64-v8a
+
+      - name: Assert Android autolinking namespace
+        if: matrix.platform == 'android'
+        working-directory: ${{ env.SMOKE_APP }}/android
+        shell: bash
+        run: |
+          PACKAGE_LIST=$(find app/build/generated -name PackageList.java -print -quit)
+          test -n "$PACKAGE_LIST"
+          # RN 0.76 emits an import; newer versions use the fully qualified name inline.
+          grep -F 'org.songsterq.pdfthumbnail.PdfThumbnailPackage' "$PACKAGE_LIST"
+          ! grep -F 'com.pdfthumbnail.' "$PACKAGE_LIST"
+
+      - name: Install iOS dependencies
+        if: matrix.platform == 'ios'
+        working-directory: ${{ env.SMOKE_APP }}/ios
+        run: bundle install && bundle exec pod install
+
+      - name: Build iOS app
+        if: matrix.platform == 'ios'
+        working-directory: ${{ env.SMOKE_APP }}/ios
+        run: >-
+          xcodebuild -workspace SmokeApp.xcworkspace -scheme SmokeApp
+          -configuration Debug -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO

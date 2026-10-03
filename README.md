@@ -38,6 +38,22 @@ const { uri, width, height } = await PdfThumbnail.generate(filePath, page, 95);
 const results = await PdfThumbnail.generateAllPages(filePath, 90);
 ```
 
+## Error codes
+
+Both methods return promises. Handle failures with `try`/`catch` or `.catch()`;
+rejections include a `code` and a human-readable message.
+
+| Code | Android | iOS (unchanged) |
+| --- | --- | --- |
+| `FILE_NOT_FOUND` | Unsupported path form or no file descriptor returned. | Invalid file URL, or PDFKit cannot open the document. |
+| `INVALID_PAGE` | Page index is outside the document's page range. | PDFKit cannot retrieve the requested page. |
+| `INTERNAL_ERROR` | File I/O failures (including missing files and corrupt PDFs), permission denial when opening a URI, JPEG compression/write failures, or other runtime exceptions. | Cannot create or write JPEG image data. |
+| `PASSWORD_PROTECTED` | New in 1.3.2: Android's PDF renderer rejects a password-protected PDF or unsupported PDF security. | Not used. |
+| `OUT_OF_MEMORY` | New in 1.3.2: insufficient memory while generating thumbnails. | Not used. |
+
+Password/security and memory failures on Android reject the promise so the app
+can handle them. iOS password-protected document handling is unchanged.
+
 ## Demo
 
 The example app contains a document picker, it generates and displays a thumbnail for the selected PDF file.
