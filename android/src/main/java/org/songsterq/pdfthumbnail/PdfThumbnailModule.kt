@@ -6,43 +6,62 @@ import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
-import com.facebook.react.bridge.ReactApplicationContext
-import com.facebook.react.bridge.ReactContextBaseJavaModule
-import com.facebook.react.bridge.ReactMethod
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
-import com.facebook.react.bridge.WritableNativeArray
-import com.facebook.react.bridge.WritableNativeMap
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.WritableMap
+import com.facebook.react.module.annotations.ReactModule
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.Random
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
+@ReactModule(name = PdfThumbnailModule.NAME)
 class PdfThumbnailModule(reactContext: ReactApplicationContext) :
-  ReactContextBaseJavaModule(reactContext) {
+  NativePdfThumbnailSpec(reactContext) {
 
-  override fun getName(): String {
-    return NAME
+  private val executor = Executors.newSingleThreadExecutor { runnable ->
+    Thread(runnable, "PdfThumbnail-renderer")
   }
 
-  @ReactMethod
-  fun generate(filePath: String, page: Int, quality: Int, promise: Promise) {
-    withRenderer(filePath, promise) { renderer ->
-      if (page < 0 || page >= renderer.pageCount) {
-        throw ThumbnailException("INVALID_PAGE", "Page number $page is invalid, file has ${renderer.pageCount} pages")
+  override fun generate(filePath: String, page: Double, quality: Double, promise: Promise) {
+    submit(promise) {
+      withRenderer(filePath, promise) { renderer ->
+        val pageIndex = page.toInt()
+        if (!page.isFinite() || pageIndex < 0 || pageIndex >= renderer.pageCount) {
+          val invalidPage = if (page.isFinite()) pageIndex.toString() else page.toString()
+          throw ThumbnailException("INVALID_PAGE", "Page number $invalidPage is invalid, file has ${renderer.pageCount} pages")
+        }
+        renderPage(renderer, pageIndex, filePath, quality.toInt())
       }
-      renderPage(renderer, page, filePath, quality)
     }
   }
 
-  @ReactMethod
-  fun generateAllPages(filePath: String, quality: Int, promise: Promise) {
-    withRenderer(filePath, promise) { renderer ->
-      val result = WritableNativeArray()
-      for (page in 0 until renderer.pageCount) {
-        result.pushMap(renderPage(renderer, page, filePath, quality))
+  override fun generateAllPages(filePath: String, quality: Double, promise: Promise) {
+    submit(promise) {
+      withRenderer(filePath, promise) { renderer ->
+        val result = Arguments.createArray()
+        for (page in 0 until renderer.pageCount) {
+          result.pushMap(renderPage(renderer, page, filePath, quality.toInt()))
+        }
+        result
       }
-      result
     }
+  }
+
+  private fun submit(promise: Promise, action: () -> Unit) {
+    try {
+      executor.execute { action() }
+    } catch (ex: RejectedExecutionException) {
+      promise.reject("INTERNAL_ERROR", ex)
+    }
+  }
+
+  override fun invalidate() {
+    executor.shutdown()
+    super.invalidate()
   }
 
   private class ThumbnailException(val code: String, message: String, cause: Throwable? = null) :
@@ -105,7 +124,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
     return null
   }
 
-  private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String, quality: Int): WritableNativeMap {
+  private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String, quality: Int): WritableMap {
     val currentPage = pdfRenderer.openPage(page)
     try {
       val width = currentPage.width
@@ -124,7 +143,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  private fun writeBitmap(bitmap: Bitmap, width: Int, height: Int, filePath: String, page: Int, quality: Int): WritableNativeMap {
+  private fun writeBitmap(bitmap: Bitmap, width: Int, height: Int, filePath: String, page: Int, quality: Int): WritableMap {
     val outputFile = File.createTempFile(getOutputFilePrefix(filePath, page), ".jpg", reactApplicationContext.cacheDir)
     var completed = false
     try {
@@ -135,7 +154,7 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
         out.flush()
       }
 
-      val map = WritableNativeMap()
+      val map = Arguments.createMap()
       map.putString("uri", Uri.fromFile(outputFile).toString())
       map.putInt("width", width)
       map.putInt("height", height)
@@ -158,6 +177,6 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
   }
 
   companion object {
-    const val NAME = "PdfThumbnail"
+    const val NAME = NativePdfThumbnailSpec.NAME
   }
 }
