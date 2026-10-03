@@ -1,5 +1,11 @@
 # Changelog
 
+# [2.0.0](https://github.com/songsterq/react-native-pdf-thumbnail/compare/v2.0.0-rc.1...v2.0.0) (2026-10-03)
+
+### Bug Fixes
+
+* **release:** include pre-release changes in stable release notes ([95d7699](https://github.com/songsterq/react-native-pdf-thumbnail/commit/95d769931671da746604f1bd84c9966c4225a829))
+
 # [2.0.0-rc.1](https://github.com/songsterq/react-native-pdf-thumbnail/compare/v1.3.2...v2.0.0-rc.1) (2026-10-03)
 
 * feat(ios)!: honor crop boxes, rotation and locked PDFs ([b5bd162](https://github.com/songsterq/react-native-pdf-thumbnail/commit/b5bd162b1e07ff0a3085aa476d9dedab99734a5c))
