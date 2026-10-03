@@ -27,53 +27,71 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
 
   @ReactMethod
   fun generate(filePath: String, page: Int, quality: Int, promise: Promise) {
-    var parcelFileDescriptor: ParcelFileDescriptor? = null
-    var pdfRenderer: PdfRenderer? = null
-    try {
-      parcelFileDescriptor = getParcelFileDescriptor(filePath)
-      if (parcelFileDescriptor == null) {
-        promise.reject("FILE_NOT_FOUND", "File $filePath not found")
-        return
+    withRenderer(filePath, promise) { renderer ->
+      if (page < 0 || page >= renderer.pageCount) {
+        throw ThumbnailException("INVALID_PAGE", "Page number $page is invalid, file has ${renderer.pageCount} pages")
       }
-
-      pdfRenderer = PdfRenderer(parcelFileDescriptor)
-      if (page < 0 || page >= pdfRenderer.pageCount) {
-        promise.reject("INVALID_PAGE", "Page number $page is invalid, file has ${pdfRenderer.pageCount} pages")
-        return
-      }
-
-      val result = renderPage(pdfRenderer, page, filePath, quality)
-      promise.resolve(result)
-    } catch (ex: IOException) {
-      promise.reject("INTERNAL_ERROR", ex)
-    } finally {
-      pdfRenderer?.close()
-      parcelFileDescriptor?.close()
+      renderPage(renderer, page, filePath, quality)
     }
   }
 
   @ReactMethod
   fun generateAllPages(filePath: String, quality: Int, promise: Promise) {
-    var parcelFileDescriptor: ParcelFileDescriptor? = null
-    var pdfRenderer: PdfRenderer? = null
-    try {
-      parcelFileDescriptor = getParcelFileDescriptor(filePath)
-      if (parcelFileDescriptor == null) {
-        promise.reject("FILE_NOT_FOUND", "File $filePath not found")
-        return
-      }
-
-      pdfRenderer = PdfRenderer(parcelFileDescriptor)
+    withRenderer(filePath, promise) { renderer ->
       val result = WritableNativeArray()
-      for (page in 0 until pdfRenderer.pageCount) {
-        result.pushMap(renderPage(pdfRenderer, page, filePath, quality))
+      for (page in 0 until renderer.pageCount) {
+        result.pushMap(renderPage(renderer, page, filePath, quality))
       }
-      promise.resolve(result)
+      result
+    }
+  }
+
+  private class ThumbnailException(val code: String, message: String, cause: Throwable? = null) :
+    Exception(message, cause)
+
+  /**
+   * Opens [filePath], runs [action] with a renderer and settles [promise] exactly once.
+   * Every failure rejects the promise instead of crashing the app, and the renderer and
+   * file descriptor are always closed.
+   */
+  private fun withRenderer(filePath: String, promise: Promise, action: (PdfRenderer) -> Any) {
+    var descriptor: ParcelFileDescriptor? = null
+    var renderer: PdfRenderer? = null
+    val result = try {
+      val openedDescriptor = getParcelFileDescriptor(filePath)
+        ?: throw ThumbnailException("FILE_NOT_FOUND", "File $filePath not found")
+      descriptor = openedDescriptor
+      val openedRenderer = try {
+        PdfRenderer(openedDescriptor)
+      } catch (ex: SecurityException) {
+        throw ThumbnailException("PASSWORD_PROTECTED", "File $filePath is password-protected or uses an unsupported security scheme", ex)
+      }
+      renderer = openedRenderer
+      action(openedRenderer)
+    } catch (ex: ThumbnailException) {
+      promise.reject(ex.code, ex.message, ex)
+      return
     } catch (ex: IOException) {
       promise.reject("INTERNAL_ERROR", ex)
+      return
+    } catch (ex: OutOfMemoryError) {
+      promise.reject("OUT_OF_MEMORY", "Not enough memory to render file $filePath", ex)
+      return
+    } catch (ex: Exception) {
+      promise.reject("INTERNAL_ERROR", ex)
+      return
     } finally {
-      pdfRenderer?.close()
-      parcelFileDescriptor?.close()
+      closeQuietly(renderer)
+      closeQuietly(descriptor)
+    }
+    promise.resolve(result)
+  }
+
+  private fun closeQuietly(closeable: AutoCloseable?) {
+    try {
+      closeable?.close()
+    } catch (ignored: Exception) {
+      // Thumbnails are already written or the promise already rejected; nothing to report.
     }
   }
 
@@ -90,34 +108,52 @@ class PdfThumbnailModule(reactContext: ReactApplicationContext) :
 
   private fun renderPage(pdfRenderer: PdfRenderer, page: Int, filePath: String, quality: Int): WritableNativeMap {
     val currentPage = pdfRenderer.openPage(page)
-    val width = currentPage.width
-    val height = currentPage.height
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-    bitmap.eraseColor(Color.WHITE)
-    currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-    currentPage.close()
+    try {
+      val width = currentPage.width
+      val height = currentPage.height
+      val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+      try {
+        bitmap.eraseColor(Color.WHITE)
+        currentPage.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
 
-    // Some bitmaps have transparent background which results in a black thumbnail. Add a white background.
-    val bitmapWhiteBG = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config ?: Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmapWhiteBG)
-    canvas.drawBitmap(bitmap, 0f, 0f, null)
-    bitmap.recycle()
-
-    val outputFile = File.createTempFile(getOutputFilePrefix(filePath, page), ".jpg", reactApplicationContext.cacheDir)
-    if (outputFile.exists()) {
-      outputFile.delete()
+        val bitmapWhiteBG = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        try {
+          val canvas = Canvas(bitmapWhiteBG)
+          canvas.drawBitmap(bitmap, 0f, 0f, null)
+          return writeBitmap(bitmapWhiteBG, width, height, filePath, page, quality)
+        } finally {
+          bitmapWhiteBG.recycle()
+        }
+      } finally {
+        bitmap.recycle()
+      }
+    } finally {
+      currentPage.close()
     }
-    val out = FileOutputStream(outputFile)
-    bitmapWhiteBG.compress(Bitmap.CompressFormat.JPEG, quality, out)
-    bitmapWhiteBG.recycle()
-    out.flush()
-    out.close()
+  }
 
-    val map = WritableNativeMap()
-    map.putString("uri", Uri.fromFile(outputFile).toString())
-    map.putInt("width", width)
-    map.putInt("height", height)
-    return map
+  private fun writeBitmap(bitmap: Bitmap, width: Int, height: Int, filePath: String, page: Int, quality: Int): WritableNativeMap {
+    val outputFile = File.createTempFile(getOutputFilePrefix(filePath, page), ".jpg", reactApplicationContext.cacheDir)
+    var completed = false
+    try {
+      FileOutputStream(outputFile).use { out ->
+        if (!bitmap.compress(Bitmap.CompressFormat.JPEG, quality, out)) {
+          throw IOException("Cannot compress thumbnail for file $filePath, page $page")
+        }
+        out.flush()
+      }
+
+      val map = WritableNativeMap()
+      map.putString("uri", Uri.fromFile(outputFile).toString())
+      map.putInt("width", width)
+      map.putInt("height", height)
+      completed = true
+      return map
+    } finally {
+      if (!completed) {
+        outputFile.delete()
+      }
+    }
   }
 
   private fun getOutputFilePrefix(filePath: String, page: Int): String {
