@@ -69,6 +69,14 @@ Review the published file list and entry points with
 `lib/typescript/`. The `exports` map serves ESM to `import` (Metro, bundlers) and
 CommonJS to `require` (Jest), so consuming apps need no Jest configuration.
 
+The native interface is defined by the codegen spec in
+`src/NativePdfThumbnail.ts`. After changing it or `codegenConfig` in
+`package.json`, rerun `pod install` for iOS, and delete
+`example/android/build/generated/autolinking` before the next Android build: the
+React Native Gradle plugin caches autolinking keyed on the example's own
+`package.json`, so it does not notice library-side codegen changes and the module
+silently fails to register.
+
 To apply formatting fixes, use `yarn lint --fix`. Keep broad formatting changes
 in a separate `style:` commit so implementation changes stay easy to review.
 

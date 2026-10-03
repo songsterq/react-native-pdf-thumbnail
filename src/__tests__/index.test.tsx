@@ -10,7 +10,9 @@ const nativeModule = {
 function loadWrapper(native: typeof nativeModule | null = nativeModule) {
   jest.resetModules();
   jest.doMock('react-native', () => ({
-    NativeModules: native ? { PdfThumbnail: native } : {},
+    TurboModuleRegistry: {
+      get: jest.fn((name: string) => (name === 'PdfThumbnail' ? native : null)),
+    },
     Platform: { select: () => '' },
   }));
   return (require('../index') as typeof import('../index')).default;
@@ -75,4 +77,28 @@ it('rejects with the linking error for both methods when the native module is mi
   );
   expect(nativeModule.generate).not.toHaveBeenCalled();
   expect(nativeModule.generateAllPages).not.toHaveBeenCalled();
+});
+
+it('mentions the New Architecture requirement at call time', async () => {
+  const PdfThumbnail = loadWrapper(null);
+  await expect(PdfThumbnail.generate('/document.pdf', 0)).rejects.toThrow(
+    /React Native >= 0\.76 with the New Architecture enabled/
+  );
+});
+
+it('looks up PdfThumbnail through TurboModuleRegistry', () => {
+  loadWrapper();
+  const { TurboModuleRegistry } = require('react-native');
+  expect(TurboModuleRegistry.get).toHaveBeenCalledTimes(1);
+  expect(TurboModuleRegistry.get).toHaveBeenCalledWith('PdfThumbnail');
+});
+
+it('passes fractional pages and quality through for native truncation', async () => {
+  const PdfThumbnail = loadWrapper();
+  await PdfThumbnail.generate('/document.pdf', 1.7, 45.9);
+  expect(nativeModule.generate).toHaveBeenCalledWith(
+    '/document.pdf',
+    1.7,
+    45.9
+  );
 });
