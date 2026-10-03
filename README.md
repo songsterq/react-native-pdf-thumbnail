@@ -4,18 +4,29 @@ A react native module for generating thumbnail for PDF files.
 
 A wrapper for:
 
-- PDFKit on iOS (requires iOS 11+)
-- PdfRenderer on Android (requires API level 21 - LOLLIPOP)
+- PDFKit on iOS (minimum iOS version follows the host React Native version)
+- PdfRenderer on Android (requires API level 24+)
 
 No other JavaScript or native dependencies.
 
-Note: This module **does not** work in Expo.
+Note: This module **does not** work in Expo Go.
 
 ## Installation
+
+Version 2.x requires **React Native >= 0.76 with the New Architecture enabled**.
+Use version 1.x for apps using the legacy architecture.
+
 
 ```sh
 npm install react-native-pdf-thumbnail
 ```
+
+Rebuild your native app after installation. On iOS, run `pod install` first.
+
+CI smoke-tests React Native 0.76.9 on Android and the latest React Native on
+Android and iOS. React Native 0.76–0.78 iOS builds are blocked with current Xcode
+by an upstream `fmt` compilation issue.
+
 
 ## Usage
 
