@@ -77,7 +77,7 @@
   },
   "peerDependencies": {
     "react": "*",
-    "react-native": "*"
+    "react-native": ">= 0.76.0"
   },
   "workspaces": [
     "example"
@@ -130,6 +130,14 @@
     "tabWidth": 2,
     "trailingComma": "es5",
     "useTabs": false
+  },
+  "codegenConfig": {
+    "name": "PdfThumbnailSpec",
+    "type": "modules",
+    "jsSrcsDir": "src",
+    "android": {
+      "javaPackageName": "org.songsterq.pdfthumbnail"
+    }
   },
   "react-native-builder-bob": {
     "source": "src",
