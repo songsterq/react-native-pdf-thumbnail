@@ -1,72 +1,128 @@
-import * as React from 'react';
-
-import { Button, Image, StyleSheet, Text, View } from 'react-native';
-import DocumentPicker from 'react-native-document-picker';
+import { useState } from 'react';
+import {
+  Button,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import {
+  errorCodes,
+  isErrorWithCode,
+  pick,
+  types,
+} from '@react-native-documents/picker';
 import PdfThumbnail, { type ThumbnailResult } from 'react-native-pdf-thumbnail';
 
-type ErrorType = { code: string; message: string };
+type ThumbnailError = { code: string; message: string };
+
+function describeError(error: unknown): ThumbnailError {
+  return {
+    code:
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String(error.code)
+        : 'UNKNOWN',
+    message:
+      typeof error === 'object' && error !== null && 'message' in error
+        ? String(error.message)
+        : String(error),
+  };
+}
 
 export default function App() {
-  const [thumbnail, setThumbnail] = React.useState<
-    ThumbnailResult | undefined
-  >();
-  const [error, setError] = React.useState<ErrorType | undefined>();
+  const [fileUri, setFileUri] = useState<string>();
+  const [thumbnail, setThumbnail] = useState<ThumbnailResult>();
+  const [pageCount, setPageCount] = useState<number>();
+  const [error, setError] = useState<ThumbnailError>();
+  const [busy, setBusy] = useState(false);
 
-  const onPress = async () => {
+  const pickPdf = async () => {
+    setBusy(true);
+    setError(undefined);
     try {
-      const { uri } = await DocumentPicker.pickSingle({
-        type: [DocumentPicker.types.pdf],
-      });
-      const result = await PdfThumbnail.generate(uri, 0, 100);
-      setThumbnail(result);
-      setError(undefined);
-    } catch (err) {
-      if (DocumentPicker.isCancel(err)) {
-        // User cancelled the picker, exit any dialogs or menus and move on
-      } else {
-        setThumbnail(undefined);
-        setError(err as ErrorType);
+      const [document] = await pick({ type: [types.pdf] });
+      if (!document) {
+        return;
       }
+      setFileUri(document.uri);
+      setThumbnail(undefined);
+      setPageCount(undefined);
+      setThumbnail(await PdfThumbnail.generate(document.uri, 0, 100));
+    } catch (e) {
+      if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) {
+        return;
+      }
+      setThumbnail(undefined);
+      setError(describeError(e));
+    } finally {
+      setBusy(false);
     }
   };
 
-  const thumbnailResult = thumbnail ? (
-    <>
-      <Image
-        source={thumbnail}
-        resizeMode="contain"
-        style={styles.thumbnailImage}
-      />
-      <Text style={styles.thumbnailInfo}>uri: {thumbnail.uri}</Text>
-      <Text style={styles.thumbnailInfo}>width: {thumbnail.width}</Text>
-      <Text style={styles.thumbnailInfo}>height: {thumbnail.height}</Text>
-    </>
-  ) : null;
-
-  const thumbnailError = error ? (
-    <>
-      <Text style={styles.thumbnailError}>Error code: {error.code}</Text>
-      <Text style={styles.thumbnailError}>Error message: {error.message}</Text>
-    </>
-  ) : null;
+  const generateAllPages = async () => {
+    if (!fileUri) {
+      return;
+    }
+    setBusy(true);
+    setError(undefined);
+    setPageCount(undefined);
+    try {
+      const results = await PdfThumbnail.generateAllPages(fileUri, 100);
+      setThumbnail(results[0]);
+      setPageCount(results.length);
+    } catch (e) {
+      setThumbnail(undefined);
+      setError(describeError(e));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.thumbnailPreview}>
-        {thumbnailResult}
-        {thumbnailError}
+        {thumbnail ? (
+          <>
+            <Image
+              source={thumbnail}
+              resizeMode="contain"
+              style={styles.thumbnailImage}
+            />
+            <Text style={styles.thumbnailInfo}>uri: {thumbnail.uri}</Text>
+            <Text style={styles.thumbnailInfo}>width: {thumbnail.width}</Text>
+            <Text style={styles.thumbnailInfo}>height: {thumbnail.height}</Text>
+          </>
+        ) : null}
+        {pageCount !== undefined ? (
+          <Text style={styles.thumbnailInfo}>Page count: {pageCount}</Text>
+        ) : null}
+        {error ? (
+          <>
+            <Text style={styles.thumbnailError}>Error code: {error.code}</Text>
+            <Text style={styles.thumbnailError}>
+              Error message: {error.message}
+            </Text>
+          </>
+        ) : null}
+        {busy ? <Text>Generating…</Text> : null}
       </View>
-      <Button onPress={onPress} title="Pick PDF File" />
-    </View>
+      <Button onPress={pickPdf} title="Pick PDF File" disabled={busy} />
+      <Button
+        onPress={generateAllPages}
+        title="Generate all pages"
+        disabled={busy || !fileUri}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 24,
   },
   thumbnailPreview: {
     padding: 20,

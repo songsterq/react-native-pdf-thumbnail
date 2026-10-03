@@ -1,7 +1,10 @@
+import { beforeEach, expect, it, jest } from '@jest/globals';
+
 const thumbnail = { uri: 'file:///thumbnail.jpg', width: 100, height: 200 };
 const nativeModule = {
-  generate: jest.fn(),
-  generateAllPages: jest.fn(),
+  generate: jest.fn<typeof import('../index').default.generate>(),
+  generateAllPages:
+    jest.fn<typeof import('../index').default.generateAllPages>(),
 };
 
 function loadWrapper(native: typeof nativeModule | null = nativeModule) {
