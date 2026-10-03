@@ -313,7 +313,8 @@ jobs:
         working-directory: ${{ env.SMOKE_APP }}
         shell: bash
         run: |
-          SPEC=ios/build/generated/ios/PdfThumbnailSpec/PdfThumbnailSpec.h
-          test -f "$SPEC"
+          # The codegen output layout differs across RN versions (RN 0.87 adds ReactCodegen/).
+          SPEC=$(find ios/build/generated -path '*/PdfThumbnailSpec/PdfThumbnailSpec.h' -print -quit)
+          test -n "$SPEC"
           grep -F '@protocol NativePdfThumbnailSpec' "$SPEC"
           grep -F 'class JSI_EXPORT NativePdfThumbnailSpecJSI' "$SPEC"
