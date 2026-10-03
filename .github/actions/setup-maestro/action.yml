@@ -1,0 +1,14 @@
+name: Setup Maestro
+description: Install the exact Maestro CLI used by the E2E flows
+runs:
+  using: composite
+  steps:
+    - name: Install Maestro 2.11.0
+      shell: bash
+      run: |
+        curl --fail --location --retry 3 \
+          https://github.com/mobile-dev-inc/maestro/releases/download/cli-2.11.0/maestro.zip \
+          --output "$RUNNER_TEMP/maestro.zip"
+        unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-cli"
+        echo "$RUNNER_TEMP/maestro-cli/maestro/bin" >> "$GITHUB_PATH"
+        test "$("$RUNNER_TEMP/maestro-cli/maestro/bin/maestro" --version)" = '2.11.0'
