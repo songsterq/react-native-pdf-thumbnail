@@ -149,3 +149,26 @@ Same split as earlier phases: Codex implements each phase from this plan (offlin
 prepared first — the RN/Expo template output and current Maestro docs snapshot); Claude commits,
 runs local device verification, and drives CI. Phase 4 first, then Phase 5; Phase 5's README
 draft can start in parallel since it does not touch the same files.
+
+## Phase 4 implementation notes (2026-10-02)
+
+- Self-test exports its results and output JPEGs to storage readable without `run-as`
+  (Android `ExternalDirectoryPath/selftest`, iOS documents dir), because E2E uses release builds.
+- Android bundles only `fixtures/*.pdf` as assets (a `copyFixtureAssets` Gradle task), not the README,
+  JSON or golden images. iOS uses a folder reference to `fixtures/` (the extra small files are harmless).
+- Golden cases are listed once in `fixtures/golden-cases.json` (11 images per platform).
+- Pinned: `android-emulator-runner` v2.38.0, `upload-artifact` v7.0.1 (latest at the time).
+
+### Local verification
+
+| Check                                                           | Result                                                                                                          |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Maestro `selftest.yaml`, release builds                         | Android 16 emulator **28/28**; iOS 27 simulator **28/28**                                                       |
+| Golden images generated and reviewed                            | 11 per platform; rotation, crop, mixed sizes, downscaling correct on both                                       |
+| Golden negative control (Android renderer without white fill)   | Maestro still 28/28 (metadata unchanged), **golden compare 0/11 → fails** as required                           |
+| Golden positive re-run after restoring code                     | 11/11, zero pixel difference (deterministic)                                                                    |
+| Expo smoke, Android (SDK 57 / RN 0.86.3, `blank-typescript`)    | prebuild without config plugin, release build OK, `PdfThumbnailPackage` autolinked; template has no test script |
+| `yarn lint` / `typecheck` / `test` (76) / `install --immutable` | pass                                                                                                            |
+
+Not yet verified locally: the Android DocumentsUI picker flow (local-only by design), Expo iOS, and
+the CI emulator/simulator jobs themselves — covered by the PR's CI run.
