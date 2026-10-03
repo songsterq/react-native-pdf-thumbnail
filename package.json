@@ -53,14 +53,13 @@
     "@evilmartians/lefthook": "^1.5.0",
     "@react-native/eslint-config": "0.87.1",
     "@release-it/conventional-changelog": "^5.0.0",
-    "@types/jest": "^28.1.2",
     "@types/react": "^19.2.0",
     "commitlint": "^17.0.2",
     "del-cli": "^7.0.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
-    "jest": "^28.1.1",
+    "jest": "^29.7.0",
     "prettier": "^3.9.6",
     "react": "19.2.3",
     "react-native": "0.87.1",
@@ -72,7 +71,9 @@
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^9.39.5",
-    "eslint-plugin-ft-flow": "^3.0.11"
+    "eslint-plugin-ft-flow": "^3.0.11",
+    "@jest/globals": "^29.7.0",
+    "@react-native/jest-preset": "0.87.1"
   },
   "peerDependencies": {
     "react": "*",
@@ -86,7 +87,14 @@
     "node": ">= 22.13.0"
   },
   "jest": {
-    "preset": "react-native",
+    "preset": "@react-native/jest-preset",
+    "testEnvironmentOptions": {
+      "customExportConditions": [
+        "require",
+        "react-native",
+        "react-native-pdf-thumbnail-source"
+      ]
+    },
     "modulePathIgnorePatterns": [
       "<rootDir>/example/node_modules",
       "<rootDir>/lib/"
