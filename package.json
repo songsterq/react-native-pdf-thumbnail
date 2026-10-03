@@ -29,7 +29,7 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build",
-    "release": "release-it"
+    "release": "release-it --only-version"
   },
   "keywords": [
     "react-native",
@@ -49,12 +49,11 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@commitlint/config-conventional": "^17.0.2",
-    "@evilmartians/lefthook": "^1.5.0",
+    "@commitlint/config-conventional": "^21.2.0",
     "@react-native/eslint-config": "0.87.1",
-    "@release-it/conventional-changelog": "^5.0.0",
+    "@release-it/conventional-changelog": "^12.0.0",
     "@types/react": "^19.2.0",
-    "commitlint": "^17.0.2",
+    "commitlint": "^21.2.1",
     "del-cli": "^7.0.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
@@ -64,7 +63,7 @@
     "react": "19.2.3",
     "react-native": "0.87.1",
     "react-native-builder-bob": "^0.43.1",
-    "release-it": "^15.0.0",
+    "release-it": "^21.0.1",
     "turbo": "^1.10.7",
     "typescript": "^6.0.3",
     "@react-native/babel-preset": "0.87.1",
@@ -73,7 +72,8 @@
     "@eslint/js": "^9.39.5",
     "eslint-plugin-ft-flow": "^3.0.11",
     "@jest/globals": "^29.7.0",
-    "@react-native/jest-preset": "0.87.1"
+    "@react-native/jest-preset": "0.87.1",
+    "lefthook": "^2.1.10"
   },
   "peerDependencies": {
     "react": "*",
@@ -118,7 +118,9 @@
     },
     "plugins": {
       "@release-it/conventional-changelog": {
-        "preset": "angular"
+        "preset": {
+          "name": "angular"
+        }
       }
     }
   },
