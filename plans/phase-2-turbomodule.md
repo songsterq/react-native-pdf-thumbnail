@@ -172,3 +172,36 @@ Also:
   `/private/tmp/pdf-thumbnail-phase1-ref/template`) and the generated codegen headers/classes
   from a local example build, so it can write against the real generated signatures.
 - Record the parity baseline **before** Codex starts, from the current `master` build.
+
+## Implementation notes (2026-10-02)
+
+- Codegen output for the spec was generated with RN 0.87.1 and handed to Codex so the native code was
+  written against real signatures. RN 0.76.9's codegen parses the same spec into an identical schema.
+- **Autolinking cache trap (local only).** The RN Gradle plugin caches `autolinking.json` keyed on the
+  _app's_ `package.json`/`react-native.config.js`. The example links the library by path, so adding
+  `codegenConfig` did not invalidate it and the module silently failed to register (`TurboModuleRegistry.get`
+  → null). Consumers are unaffected (bumping the dependency changes their `package.json`). Documented in
+  CONTRIBUTING: delete `example/android/build/generated/autolinking` after codegen changes.
+- **Legacy architecture on RN 0.81 (Android) actually works**: TurboModuleRegistry falls back to the
+  bridge, and the generated spec extends `ReactContextBaseJavaModule`. Officially still unsupported
+  (untested, may break; use 1.x). The plan's requirement — no crash at import — holds.
+
+### Parity results (1.3.2 baseline vs. TurboModule, Android 16 emulator + iOS 27 simulator)
+
+| Check                                                                                 | Result                                                                                                       |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 24 cases (12 × 2 platforms): results, error codes, messages, dimensions, URI patterns | 23 identical; 1 intended difference (iOS page −1 message now says `-1` instead of `4294967295`)              |
+| Output JPEGs (11 files incl. 14400×14400 and quality 0/100)                           | byte-identical sizes, zero pixel difference                                                                  |
+| `generateAllPages` 300 pages                                                          | Android 3535 → 3625 ms (+2.5 %), iOS 299 → 266 ms                                                            |
+| JS thread during 300-page run                                                         | interval ticks unchanged (Android 50 → 50, iOS 4 → 4)                                                        |
+| Android huge page timing                                                              | 6174 → 8910 ms, single sample taken at emulator load average 9.8 — treated as noise, not a regression signal |
+
+### Other verification
+
+| Check                                                        | Result                                                                                            |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `yarn lint` / `typecheck` / `test` (11) / `prepare`          | pass                                                                                              |
+| Tarball                                                      | `.kt`, `.h`, `.mm`, spec in `src` + `lib`; no Swift, no bridging header                           |
+| Example Android / iOS build with codegen                     | pass; `NativePdfThumbnailSpec.java` and `PdfThumbnailSpec.h` generated                            |
+| Fresh RN 0.76.9 app, Android                                 | builds; library Kotlin (incl. positional `ReactModuleInfo`) compiles; module in `autolinking.cpp` |
+| Fresh RN 0.81.6 app, `newArchEnabled=false`, Android release | no import crash; calls reach native (rejects with the real ENOENT error)                          |
