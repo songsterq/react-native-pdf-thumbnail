@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # Yarn workspaces: one entry at the root updates both package.json files and
+  # the shared root yarn.lock (an /example entry cannot update the lockfile).
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -13,7 +15,6 @@ updates:
           - '@react-native-community/cli*'
           - '@types/react'
         update-types:
-          - minor
           - patch
       dev-tooling:
         dependency-type: development
@@ -29,40 +30,26 @@ updates:
           - minor
           - patch
     ignore:
-      # Root React/RN majors move deliberately with the example app.
+      # React Native upgrades (0.x minors are breaking) and the React version they
+      # pin move together, deliberately, with the current RN app template.
       - dependency-name: react
-        update-types: ['version-update:semver-major']
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
       - dependency-name: react-native
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@react-native/*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@react-native-community/cli*'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+      - dependency-name: '@types/react'
+        update-types:
+          ['version-update:semver-major', 'version-update:semver-minor']
+      # Babel majors follow @react-native/babel-preset.
+      - dependency-name: '@babel/*'
         update-types: ['version-update:semver-major']
-
-  - package-ecosystem: npm
-    directory: /example
-    schedule:
-      interval: weekly
-    groups:
-      react-native:
-        patterns:
-          - react
-          - react-native
-          - '@react-native/*'
-          - '@react-native-community/cli*'
-          - '@types/react'
-        update-types:
-          - minor
-          - patch
-      dev-tooling:
-        dependency-type: development
-        patterns:
-          - '*'
-        exclude-patterns:
-          - react
-          - react-native
-          - '@react-native/*'
-          - '@react-native-community/cli*'
-          - '@types/react'
-        update-types:
-          - minor
-          - patch
 
   - package-ecosystem: github-actions
     directory: /
@@ -72,8 +59,5 @@ updates:
       github-actions:
         patterns:
           - '*'
-
-  - package-ecosystem: bundler
-    directory: /example
-    schedule:
-      interval: monthly
+# Ruby gems (example/Gemfile) intentionally follow the React Native app template's
+# pins and are updated with React Native upgrades, not by Dependabot.
