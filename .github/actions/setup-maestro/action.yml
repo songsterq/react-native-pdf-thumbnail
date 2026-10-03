@@ -11,4 +11,10 @@ runs:
           --output "$RUNNER_TEMP/maestro.zip"
         unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-cli"
         echo "$RUNNER_TEMP/maestro-cli/maestro/bin" >> "$GITHUB_PATH"
-        test "$("$RUNNER_TEMP/maestro-cli/maestro/bin/maestro" --version)" = '2.11.0'
+        echo "MAESTRO_CLI_NO_ANALYTICS=1" >> "$GITHUB_ENV"
+        echo "MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true" >> "$GITHUB_ENV"
+        # Print the full output: on first run the CLI may add notices around the version line.
+        VERSION_OUTPUT=$(MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
+          "$RUNNER_TEMP/maestro-cli/maestro/bin/maestro" --version 2>&1)
+        echo "$VERSION_OUTPUT"
+        grep -qx '2.11.0' <<<"$VERSION_OUTPUT"

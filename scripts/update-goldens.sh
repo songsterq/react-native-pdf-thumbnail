@@ -13,7 +13,7 @@ if [[ "$PLATFORM" != android && "$PLATFORM" != ios ]] || [[ $# -gt 2 ]]; then
   echo "Usage: $0 <android|ios> [adb-serial|simulator-udid]" >&2
   exit 2
 fi
-if [[ "$(maestro --version)" != "2.11.0" ]]; then
+if ! maestro --version 2>&1 | grep -qx "2.11.0"; then
   echo 'Requires Maestro 2.11.0' >&2
   exit 1
 fi
