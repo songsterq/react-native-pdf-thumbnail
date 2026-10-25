@@ -1748,15 +1748,15 @@ __metadata:
   linkType: hard
 
 "@dr.pogodin/react-native-fs@npm:^2.40.3":
-  version: 2.40.3
-  resolution: "@dr.pogodin/react-native-fs@npm:2.40.3"
+  version: 2.41.0
+  resolution: "@dr.pogodin/react-native-fs@npm:2.41.0"
   dependencies:
     buffer: "npm:^6.0.3"
     http-status-codes: "npm:^2.3.0"
   peerDependencies:
     react: "*"
     react-native: "*"
-  checksum: 10c0/a3d6a7a20eb82f1edc5aa90fe82c7f25d26c949c8cebf9f092e73a5e0803fe28e09028874abf93bb47e5ef27161254811ccded815ce2cd04330863a7838767d9
+  checksum: 10c0/db46ae059024ed423c48f67f0b130b0f71fe4bb7ee943245953199abca31a2ffe5f60f500f5d45ea51ee2fc238f1381a1c4aae5db3ed6a19f969c423d1e3bd5e
   languageName: node
   linkType: hard
 
